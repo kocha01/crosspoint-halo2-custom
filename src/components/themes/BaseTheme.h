@@ -46,6 +46,8 @@ struct ThemeMetrics {
 
   int homeTopPadding;
   int homeCoverHeight;
+  int homeSideCoverHeight = 0;  // Side cover thumbnail height (0 = use homeCoverHeight)
+  int homeFarCoverHeight = 0;   // Far cover thumbnail height (0 = use homeCoverHeight)
   int homeCoverTileHeight;
   int homeRecentBooksCount;
 

@@ -47,6 +47,21 @@ class GfxRenderer {
   // as before, concentrated in a single pointer instead of four fields.
   mutable FontCacheManager* fontCacheManager_ = nullptr;
 
+  // Global fallback font for glyphs missing from the primary font.
+  const EpdFontFamily* fallbackFont_ = nullptr;
+  // Per-font fallback overrides keyed by primary font ID.
+  std::map<int, const EpdFontFamily*> fallbackFontMap_;
+
+#ifdef CROSSPOINT_EMULATED
+  mutable bool debugTextBoundsActive_ = false;
+  mutable int debugTextBoundsMinX_ = 0;
+  mutable int debugTextBoundsMaxX_ = 0;
+  mutable int debugTextBoundsMinY_ = 0;
+  mutable int debugTextBoundsMaxY_ = 0;
+  mutable int debugTextExpectedRight_ = 0;
+  mutable std::string debugTextSample_;
+#endif
+
   void renderChar(const EpdFontFamily& fontFamily, uint32_t cp, int* x, int* y, bool pixelState,
                   EpdFontFamily::Style style) const;
   void freeBwBufferChunks();
@@ -71,6 +86,19 @@ class GfxRenderer {
   void setFontCacheManager(FontCacheManager* m) { fontCacheManager_ = m; }
   FontCacheManager* getFontCacheManager() const { return fontCacheManager_; }
   const std::map<int, EpdFontFamily>& getFontMap() const { return fontMap; }
+  void setFallbackFont(const EpdFontFamily* font) { fallbackFont_ = font; }
+  void setFallbackFont(int fontId, const EpdFontFamily* font) {
+    if (font) {
+      fallbackFontMap_[fontId] = font;
+    } else {
+      fallbackFontMap_.erase(fontId);
+    }
+  }
+  const EpdFontFamily* getFallbackFont() const { return fallbackFont_; }
+  const EpdFontFamily* getFallbackFont(int fontId) const {
+    const auto it = fallbackFontMap_.find(fontId);
+    return it != fallbackFontMap_.end() ? it->second : fallbackFont_;
+  }
 
   // Orientation control (affects logical width/height and coordinate transforms)
   void setOrientation(const Orientation o) { orientation = o; }
@@ -106,6 +134,7 @@ class GfxRenderer {
                        bool roundBottomLeft, bool roundBottomRight, Color color) const;
   void drawImage(const uint8_t bitmap[], int x, int y, int width, int height) const;
   void drawIcon(const uint8_t bitmap[], int x, int y, int width, int height) const;
+  void drawIconInverted(const uint8_t bitmap[], int x, int y, int width, int height) const;
   void drawBitmap(const Bitmap& bitmap, int x, int y, int maxWidth, int maxHeight, float cropX = 0,
                   float cropY = 0) const;
   void drawBitmap1Bit(const Bitmap& bitmap, int x, int y, int maxWidth, int maxHeight) const;
@@ -125,6 +154,9 @@ class GfxRenderer {
   /// Returns the kerning adjustment between two adjacent codepoints.
   int getKerning(int fontId, uint32_t leftCp, uint32_t rightCp, EpdFontFamily::Style style) const;
   int getTextAdvanceX(int fontId, const char* text, EpdFontFamily::Style style) const;
+  /// Returns a width suitable for line fitting when glyphs can visually extend past their advance
+  /// box, such as Thai vowel signs and tone marks.
+  int getTextFitWidth(int fontId, const char* text, EpdFontFamily::Style style) const;
   int getFontAscenderSize(int fontId) const;
   int getLineHeight(int fontId) const;
   std::string truncatedText(int fontId, const char* text, int maxWidth,

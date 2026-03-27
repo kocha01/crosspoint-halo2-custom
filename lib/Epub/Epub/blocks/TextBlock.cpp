@@ -4,6 +4,10 @@
 #include <Logging.h>
 #include <Serialization.h>
 
+namespace {
+constexpr const char* kZeroWidthSpaceUtf8 = "\xE2\x80\x8B";
+}
+
 void TextBlock::render(const GfxRenderer& renderer, const int fontId, const int x, const int y) const {
   // Validate iterator bounds before rendering
   if (words.size() != wordXpos.size() || words.size() != wordStyles.size()) {
@@ -13,6 +17,10 @@ void TextBlock::render(const GfxRenderer& renderer, const int fontId, const int 
   }
 
   for (size_t i = 0; i < words.size(); i++) {
+    if (words[i] == kZeroWidthSpaceUtf8) {
+      continue;
+    }
+
     const int wordX = wordXpos[i] + x;
     const EpdFontFamily::Style currentStyle = wordStyles[i];
     renderer.drawText(fontId, wordX, y, words[i].c_str(), true, currentStyle);

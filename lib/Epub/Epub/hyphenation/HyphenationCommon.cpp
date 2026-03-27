@@ -69,6 +69,28 @@ bool isCyrillicLetter(const uint32_t cp) { return (cp >= 0x0400 && cp <= 0x052F)
 
 bool isAlphabetic(const uint32_t cp) { return isLatinLetter(cp) || isCyrillicLetter(cp); }
 
+bool isThaiCharacter(const uint32_t cp) { return cp >= 0x0E00 && cp <= 0x0E7F; }
+
+// Thai combining marks: above/below vowels, tone marks, and other diacritics
+// that MUST stay attached to their preceding base consonant.
+bool isThaiCombining(const uint32_t cp) {
+  return cp == 0x0E31 ||                    // Mai Han Akat (สระอั)
+         (cp >= 0x0E34 && cp <= 0x0E3A) ||  // Above/below vowels (อิ อี อึ อื อุ อู) + Phinthu
+         (cp >= 0x0E47 && cp <= 0x0E4E);    // Mai Taikhu, tone marks (่ ้ ๊ ๋), Thanthakhat, Nikhahit, Yamakkan
+}
+
+// Thai following vowels that visually attach to the right of a consonant.
+// Breaking before these would orphan the vowel on a new line (e.g. "ม" / "า").
+bool isThaiFollowingVowel(const uint32_t cp) {
+  return cp == 0x0E30 ||  // Sara A (สระอะ)
+         cp == 0x0E32 ||  // Sara AA (สระอา)
+         cp == 0x0E33;    // Sara AM (สระอำ)
+}
+
+// Thai leading vowels that appear before the consonant they modify.
+// Must stay with the following consonant (e.g. "เ" + "ก" = "เก").
+bool isThaiLeadingVowel(const uint32_t cp) { return cp >= 0x0E40 && cp <= 0x0E44; }
+
 bool isPunctuation(const uint32_t cp) {
   switch (cp) {
     case '-':

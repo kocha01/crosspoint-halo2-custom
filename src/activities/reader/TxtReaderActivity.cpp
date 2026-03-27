@@ -7,6 +7,8 @@
 #include <Serialization.h>
 #include <Utf8.h>
 
+#include "Epub/hyphenation/HyphenationCommon.h"
+#include "Epub/hyphenation/ThaiWordBreaker.h"
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
@@ -19,7 +21,100 @@ namespace {
 constexpr size_t CHUNK_SIZE = 8 * 1024;  // 8KB chunk for reading
 // Cache file magic and version
 constexpr uint32_t CACHE_MAGIC = 0x54585449;  // "TXTI"
-constexpr uint8_t CACHE_VERSION = 2;          // Increment when cache format changes
+constexpr uint8_t CACHE_VERSION = 3;          // Increment when cache format or wrap logic changes
+
+int measurePrefixWidth(const GfxRenderer& renderer, const int fontId, const std::string& text, const size_t byteOffset) {
+  return renderer.getTextWidth(fontId, text.substr(0, byteOffset).c_str());
+}
+
+size_t findBestSpaceBreakOffset(const std::string& text, const int maxWidth, const GfxRenderer& renderer,
+                                const int fontId) {
+  size_t searchFrom = text.size();
+  while (searchFrom > 0) {
+    const size_t candidate = text.rfind(' ', searchFrom - 1);
+    if (candidate == std::string::npos || candidate == 0) {
+      break;
+    }
+    if (measurePrefixWidth(renderer, fontId, text, candidate) <= maxWidth) {
+      return candidate;
+    }
+    searchFrom = candidate;
+  }
+
+  return 0;
+}
+
+size_t findBestThaiBreakOffset(const std::string& text, const int maxWidth, const GfxRenderer& renderer,
+                               const int fontId, const bool includeFallback) {
+  const auto cps = collectCodepoints(text);
+  if (cps.size() < 2) {
+    return 0;
+  }
+
+  size_t chosenOffset = 0;
+  int chosenWidth = -1;
+
+  size_t runStart = 0;
+  while (runStart < cps.size()) {
+    while (runStart < cps.size() && !isThaiCharacter(cps[runStart].value)) {
+      ++runStart;
+    }
+    if (runStart >= cps.size()) {
+      break;
+    }
+
+    size_t runEnd = runStart;
+    while (runEnd < cps.size() && isThaiCharacter(cps[runEnd].value)) {
+      ++runEnd;
+    }
+
+    if (runEnd - runStart >= 2) {
+      std::vector<CodepointInfo> run(cps.begin() + runStart, cps.begin() + runEnd);
+      const auto breakIndexes = ThaiWordBreaker::breakIndexes(run, includeFallback);
+      for (const size_t idx : breakIndexes) {
+        if (idx == 0 || idx >= run.size()) {
+          continue;
+        }
+
+        const size_t byteOffset = run[idx].byteOffset;
+        const int prefixWidth = measurePrefixWidth(renderer, fontId, text, byteOffset);
+        if (prefixWidth <= maxWidth && prefixWidth > chosenWidth) {
+          chosenWidth = prefixWidth;
+          chosenOffset = byteOffset;
+        }
+      }
+    }
+
+    runStart = runEnd;
+  }
+
+  return chosenOffset;
+}
+
+size_t findBestUtf8BreakOffset(const std::string& text, const int maxWidth, const GfxRenderer& renderer,
+                               const int fontId) {
+  std::vector<size_t> codepointOffsets;
+  codepointOffsets.reserve(text.size());
+
+  const unsigned char* ptr = reinterpret_cast<const unsigned char*>(text.c_str());
+  while (*ptr != 0) {
+    const unsigned char* current = ptr;
+    utf8NextCodepoint(&ptr);
+    codepointOffsets.push_back(static_cast<size_t>(ptr - reinterpret_cast<const unsigned char*>(text.c_str())));
+    if (ptr == current) {
+      break;
+    }
+  }
+
+  for (size_t idx = codepointOffsets.size(); idx-- > 1;) {
+    const size_t byteOffset = codepointOffsets[idx];
+    if (measurePrefixWidth(renderer, fontId, text, byteOffset) <= maxWidth) {
+      return byteOffset;
+    }
+  }
+
+  return codepointOffsets.empty() ? 0 : codepointOffsets.front();
+}
 }  // namespace
 
 void TxtReaderActivity::onEnter() {
@@ -230,21 +325,17 @@ bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<std::string>
         break;
       }
 
-      // Find break point
-      size_t breakPos = line.length();
-      while (breakPos > 0 && renderer.getTextWidth(cachedFontId, line.substr(0, breakPos).c_str()) > viewportWidth) {
-        // Try to break at space
-        size_t spacePos = line.rfind(' ', breakPos - 1);
-        if (spacePos != std::string::npos && spacePos > 0) {
-          breakPos = spacePos;
-        } else {
-          // Break at character boundary for UTF-8
-          breakPos--;
-          // Make sure we don't break in the middle of a UTF-8 sequence
-          while (breakPos > 0 && (line[breakPos] & 0xC0) == 0x80) {
-            breakPos--;
-          }
-        }
+      // Prefer word boundaries. For Thai, try dictionary-backed breaks first so
+      // marks like mai han akat / sara ue stay with the intended word.
+      size_t breakPos = findBestSpaceBreakOffset(line, viewportWidth, renderer, cachedFontId);
+      if (breakPos == 0) {
+        breakPos = findBestThaiBreakOffset(line, viewportWidth, renderer, cachedFontId, false);
+      }
+      if (breakPos == 0) {
+        breakPos = findBestThaiBreakOffset(line, viewportWidth, renderer, cachedFontId, true);
+      }
+      if (breakPos == 0) {
+        breakPos = findBestUtf8BreakOffset(line, viewportWidth, renderer, cachedFontId);
       }
 
       if (breakPos == 0) {
@@ -375,10 +466,20 @@ void TxtReaderActivity::renderPage() {
   renderLines();
   renderStatusBar();
 
+  // Dark mode: invert framebuffer (white text on black background)
+  if (SETTINGS.readerDarkMode) {
+    renderer.invertScreen();
+  }
+
   ReaderUtils::displayWithRefreshCycle(renderer, pagesUntilFullRefresh);
 
   if (SETTINGS.textAntiAliasing) {
-    ReaderUtils::renderAntiAliased(renderer, [&renderLines]() { renderLines(); });
+    ReaderUtils::renderAntiAliased(renderer, [&renderLines, this]() {
+      renderLines();
+      if (SETTINGS.readerDarkMode) {
+        renderer.invertScreen();
+      }
+    });
   }
   // scope destructor clears font cache via FontCacheManager
 }

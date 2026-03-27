@@ -202,6 +202,8 @@ for i_start, i_end in unvalidated_intervals:
 for face in font_stack:
     face.set_char_size(size << 6, size << 6, 150, 150)
 
+metrics_face = font_stack[0]
+
 total_size = 0
 all_glyphs = []
 
@@ -768,6 +770,36 @@ if compress:
     if group_count > 0:
         groups.append((group_start, group_count))
 
+    # Keep decompression groups small enough for the embedded heap.
+    # Large CJK ranges can otherwise become a single 70-150 KB hot-group,
+    # which is fine on the simulator but can fail with bad_alloc on device.
+    MAX_GROUP_BYTES = 8192
+    MAX_GROUP_GLYPHS = 96
+
+    split_groups = []
+    for first_idx, count in groups:
+        current_start = first_idx
+        current_count = 0
+        current_bytes = 0
+
+        for gi in range(first_idx, first_idx + count):
+            props, packed = all_glyphs[gi]
+            glyph_bytes = len(to_byte_aligned(packed, props.width, props.height))
+
+            if current_count > 0 and (current_bytes + glyph_bytes > MAX_GROUP_BYTES or current_count >= MAX_GROUP_GLYPHS):
+                split_groups.append((current_start, current_count))
+                current_start = gi
+                current_count = 0
+                current_bytes = 0
+
+            current_count += 1
+            current_bytes += glyph_bytes
+
+        if current_count > 0:
+            split_groups.append((current_start, current_count))
+
+    groups = split_groups
+
     # Compress each group
     compressed_groups = []  # list of (compressed_bytes, uncompressed_size, glyph_count, first_glyph_index)
     compressed_bitmap_data = []
@@ -887,9 +919,9 @@ print(f"    {font_name}Bitmaps,")
 print(f"    {font_name}Glyphs,")
 print(f"    {font_name}Intervals,")
 print(f"    {len(intervals)},")
-print(f"    {norm_ceil(face.size.height)},")
-print(f"    {norm_ceil(face.size.ascender)},")
-print(f"    {norm_floor(face.size.descender)},")
+print(f"    {norm_ceil(metrics_face.size.height)},")
+print(f"    {norm_ceil(metrics_face.size.ascender)},")
+print(f"    {norm_floor(metrics_face.size.descender)},")
 print(f"    {'true' if is2Bit else 'false'},")
 if compress:
     print(f"    {font_name}Groups,")

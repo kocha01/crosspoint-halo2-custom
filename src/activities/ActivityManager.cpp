@@ -34,7 +34,9 @@ void ActivityManager::renderTaskLoop() {
     // Acquire the lock before reading currentActivity to avoid a TOCTOU race
     // where the main task deletes the activity between the null-check and render().
     RenderLock lock;
-    if (currentActivity) {
+    // Skip render if an activity transition is pending — avoids a stale render
+    // of the OLD activity right before it gets replaced (causes extra e-ink flicker).
+    if (currentActivity && pendingAction == PendingAction::None) {
       HalPowerManager::Lock powerLock;  // Ensure we don't go into low-power mode while rendering
       currentActivity->render(std::move(lock));
     }

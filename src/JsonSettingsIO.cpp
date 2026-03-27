@@ -64,6 +64,34 @@ void applyLegacyStatusBarSettings(CrossPointSettings& settings) {
   }
 }
 
+uint8_t migrateLegacyFontFamily(const uint8_t legacyValue) {
+  return legacyValue == 3 ? CrossPointSettings::CLOUDLOOP : CrossPointSettings::NOTOSANS;
+}
+
+uint8_t migrateLegacyFontSize(const uint8_t legacyValue) {
+  switch (legacyValue) {
+    case 0:
+      return CrossPointSettings::FONT_12;
+    case 1:
+    default:
+      return CrossPointSettings::FONT_14;
+    case 2:
+      return CrossPointSettings::FONT_16;
+    case 3:
+      return CrossPointSettings::FONT_18;
+  }
+}
+
+uint8_t normalizeFontSize(const uint8_t sizeValue) {
+  if (sizeValue <= CrossPointSettings::FONT_SIZE_MIN) return CrossPointSettings::FONT_SIZE_MIN;
+  if (sizeValue >= CrossPointSettings::FONT_SIZE_MAX) return CrossPointSettings::FONT_SIZE_MAX;
+
+  const uint8_t delta = sizeValue - CrossPointSettings::FONT_SIZE_MIN;
+  const uint8_t roundedSteps = static_cast<uint8_t>((delta + 1) / CrossPointSettings::FONT_SIZE_STEP);
+  return static_cast<uint8_t>(CrossPointSettings::FONT_SIZE_MIN +
+                              roundedSteps * CrossPointSettings::FONT_SIZE_STEP);
+}
+
 // ---- CrossPointState ----
 
 bool JsonSettingsIO::saveState(const CrossPointState& s, const char* path) {
@@ -115,6 +143,9 @@ bool JsonSettingsIO::saveSettings(const CrossPointSettings& s, const char* path)
     }
   }
 
+  // Orientation — managed by reader menu, not in SettingsList.
+  doc["orientation"] = s.orientation;
+
   // Front button remap — managed by RemapFrontButtons sub-activity, not in SettingsList.
   doc["frontButtonBack"] = s.frontButtonBack;
   doc["frontButtonConfirm"] = s.frontButtonConfirm;
@@ -142,6 +173,7 @@ bool JsonSettingsIO::loadSettings(CrossPointSettings& s, const char* json, bool*
   if (doc["statusBarChapterPageCount"].isNull()) {
     applyLegacyStatusBarSettings(s);
   }
+  const bool legacyFontEncoding = !doc["fontSize"].isNull() && (doc["fontSize"].as<int>() < CrossPointSettings::FONT_SIZE_MIN);
 
   for (const auto& info : getSettingsList()) {
     if (!info.key) continue;
@@ -174,6 +206,28 @@ bool JsonSettingsIO::loadSettings(CrossPointSettings& s, const char* json, bool*
     } else {
       const uint8_t fieldDefault = s.*(info.valuePtr);  // struct-initializer default, read before we overwrite it
       uint8_t v = doc[info.key] | fieldDefault;
+      if (info.valuePtr == &CrossPointSettings::fontFamily) {
+        if (legacyFontEncoding) {
+          v = migrateLegacyFontFamily(v);
+          if (needsResave) *needsResave = true;
+        } else {
+          v = clamp(v, (uint8_t)CrossPointSettings::FONT_FAMILY_COUNT, fieldDefault);
+        }
+        s.*(info.valuePtr) = v;
+        continue;
+      }
+      if (info.valuePtr == &CrossPointSettings::fontSize) {
+        if (legacyFontEncoding) {
+          v = migrateLegacyFontSize(v);
+          if (needsResave) *needsResave = true;
+        } else {
+          const uint8_t normalized = normalizeFontSize(v);
+          if (normalized != v && needsResave) *needsResave = true;
+          v = normalized;
+        }
+        s.*(info.valuePtr) = v;
+        continue;
+      }
       if (info.type == SettingType::ENUM) {
         v = clamp(v, (uint8_t)info.enumValues.size(), fieldDefault);
       } else if (info.type == SettingType::TOGGLE) {
@@ -187,6 +241,11 @@ bool JsonSettingsIO::loadSettings(CrossPointSettings& s, const char* json, bool*
       s.*(info.valuePtr) = v;
     }
   }
+
+  // Orientation — managed by reader menu, not in SettingsList.
+  s.orientation =
+      clamp(doc["orientation"] | (uint8_t)CrossPointSettings::PORTRAIT, CrossPointSettings::ORIENTATION_COUNT,
+            CrossPointSettings::PORTRAIT);
 
   // Front button remap — managed by RemapFrontButtons sub-activity, not in SettingsList.
   using S = CrossPointSettings;
@@ -302,6 +361,9 @@ bool JsonSettingsIO::saveRecentBooks(const RecentBooksStore& store, const char* 
     obj["title"] = book.title;
     obj["author"] = book.author;
     obj["coverBmpPath"] = book.coverBmpPath;
+    if (book.progressPercent > 0) {
+      obj["progressPercent"] = book.progressPercent;
+    }
   }
 
   String json;
@@ -326,6 +388,7 @@ bool JsonSettingsIO::loadRecentBooks(RecentBooksStore& store, const char* json) 
     book.title = obj["title"] | std::string("");
     book.author = obj["author"] | std::string("");
     book.coverBmpPath = obj["coverBmpPath"] | std::string("");
+    book.progressPercent = obj["progressPercent"] | 0;
     store.recentBooks.push_back(book);
   }
 

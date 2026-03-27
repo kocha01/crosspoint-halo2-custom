@@ -26,6 +26,36 @@ constexpr uint8_t SETTINGS_FILE_VERSION = 1;
 constexpr char SETTINGS_FILE_BIN[] = "/.crosspoint/settings.bin";
 constexpr char SETTINGS_FILE_JSON[] = "/.crosspoint/settings.json";
 constexpr char SETTINGS_FILE_BAK[] = "/.crosspoint/settings.bin.bak";
+constexpr uint8_t LEGACY_FONT_FAMILY_COUNT = 4;
+constexpr uint8_t LEGACY_FONT_SIZE_COUNT = 4;
+
+uint8_t migrateLegacyFontFamily(const uint8_t legacyValue) {
+  return legacyValue == 3 ? CrossPointSettings::CLOUDLOOP : CrossPointSettings::NOTOSANS;
+}
+
+uint8_t migrateLegacyFontSize(const uint8_t legacyValue) {
+  switch (legacyValue) {
+    case 0:
+      return CrossPointSettings::FONT_12;
+    case 1:
+    default:
+      return CrossPointSettings::FONT_14;
+    case 2:
+      return CrossPointSettings::FONT_16;
+    case 3:
+      return CrossPointSettings::FONT_18;
+  }
+}
+
+uint8_t normalizeFontSize(const uint8_t sizeValue) {
+  if (sizeValue <= CrossPointSettings::FONT_SIZE_MIN) return CrossPointSettings::FONT_SIZE_MIN;
+  if (sizeValue >= CrossPointSettings::FONT_SIZE_MAX) return CrossPointSettings::FONT_SIZE_MAX;
+
+  const uint8_t delta = sizeValue - CrossPointSettings::FONT_SIZE_MIN;
+  const uint8_t roundedSteps = static_cast<uint8_t>((delta + 1) / CrossPointSettings::FONT_SIZE_STEP);
+  return static_cast<uint8_t>(CrossPointSettings::FONT_SIZE_MIN +
+                              roundedSteps * CrossPointSettings::FONT_SIZE_STEP);
+}
 
 // Convert legacy front button layout into explicit logical->hardware mapping.
 void applyLegacyFrontButtonLayout(CrossPointSettings& settings) {
@@ -150,9 +180,21 @@ bool CrossPointSettings::loadFromBinaryFile() {
     if (++settingsRead >= fileSettingsCount) break;
     readAndValidate(inputFile, sideButtonLayout, SIDE_BUTTON_LAYOUT_COUNT);
     if (++settingsRead >= fileSettingsCount) break;
-    readAndValidate(inputFile, fontFamily, FONT_FAMILY_COUNT);
+    {
+      uint8_t rawFontFamily = 0;
+      serialization::readPod(inputFile, rawFontFamily);
+      if (rawFontFamily < LEGACY_FONT_FAMILY_COUNT) {
+        fontFamily = migrateLegacyFontFamily(rawFontFamily);
+      }
+    }
     if (++settingsRead >= fileSettingsCount) break;
-    readAndValidate(inputFile, fontSize, FONT_SIZE_COUNT);
+    {
+      uint8_t rawFontSize = 0;
+      serialization::readPod(inputFile, rawFontSize);
+      if (rawFontSize < LEGACY_FONT_SIZE_COUNT) {
+        fontSize = migrateLegacyFontSize(rawFontSize);
+      }
+    }
     if (++settingsRead >= fileSettingsCount) break;
     readAndValidate(inputFile, lineSpacing, LINE_COMPRESSION_COUNT);
     if (++settingsRead >= fileSettingsCount) break;
@@ -227,20 +269,10 @@ bool CrossPointSettings::loadFromBinaryFile() {
 
 float CrossPointSettings::getReaderLineCompression() const {
   switch (fontFamily) {
-    case BOOKERLY:
+    case NOTOSANS:
     default:
       switch (lineSpacing) {
         case TIGHT:
-          return 0.95f;
-        case NORMAL:
-        default:
-          return 1.0f;
-        case WIDE:
-          return 1.1f;
-      }
-    case NOTOSANS:
-      switch (lineSpacing) {
-        case TIGHT:
           return 0.90f;
         case NORMAL:
         default:
@@ -248,7 +280,7 @@ float CrossPointSettings::getReaderLineCompression() const {
         case WIDE:
           return 1.0f;
       }
-    case OPENDYSLEXIC:
+    case CLOUDLOOP:
       switch (lineSpacing) {
         case TIGHT:
           return 0.90f;
@@ -256,7 +288,7 @@ float CrossPointSettings::getReaderLineCompression() const {
         default:
           return 0.95f;
         case WIDE:
-          return 1.0f;
+          return 1.05f;
       }
   }
 }
@@ -295,42 +327,50 @@ int CrossPointSettings::getRefreshFrequency() const {
 
 int CrossPointSettings::getReaderFontId() const {
   switch (fontFamily) {
-    case BOOKERLY:
-    default:
-      switch (fontSize) {
-        case SMALL:
-          return BOOKERLY_12_FONT_ID;
-        case MEDIUM:
-        default:
-          return BOOKERLY_14_FONT_ID;
-        case LARGE:
-          return BOOKERLY_16_FONT_ID;
-        case EXTRA_LARGE:
-          return BOOKERLY_18_FONT_ID;
-      }
     case NOTOSANS:
-      switch (fontSize) {
-        case SMALL:
+    default: {
+      const uint8_t normalizedSize = normalizeFontSize(fontSize);
+      switch (normalizedSize) {
+        case FONT_12:
           return NOTOSANS_12_FONT_ID;
-        case MEDIUM:
-        default:
+        case FONT_14:
           return NOTOSANS_14_FONT_ID;
-        case LARGE:
+        case FONT_16:
           return NOTOSANS_16_FONT_ID;
-        case EXTRA_LARGE:
+        case FONT_18:
           return NOTOSANS_18_FONT_ID;
-      }
-    case OPENDYSLEXIC:
-      switch (fontSize) {
-        case SMALL:
-          return OPENDYSLEXIC_8_FONT_ID;
-        case MEDIUM:
+        case FONT_20:
         default:
-          return OPENDYSLEXIC_10_FONT_ID;
-        case LARGE:
-          return OPENDYSLEXIC_12_FONT_ID;
-        case EXTRA_LARGE:
-          return OPENDYSLEXIC_14_FONT_ID;
+          return NOTOSANS_20_FONT_ID;
+      }
+    }
+    case CLOUDLOOP:
+      switch (normalizeFontSize(fontSize)) {
+        case FONT_12:
+          return CLOUDLOOP_12_FONT_ID;
+        case FONT_14:
+          return CLOUDLOOP_14_FONT_ID;
+        case FONT_16:
+          return CLOUDLOOP_16_FONT_ID;
+        case FONT_18:
+          return CLOUDLOOP_18_FONT_ID;
+        case FONT_20:
+        default:
+          return CLOUDLOOP_20_FONT_ID;
+      }
+    case BOOKERLY:
+      switch (normalizeFontSize(fontSize)) {
+        case FONT_12:
+          return BOOKERLY_12_FONT_ID;
+        case FONT_14:
+          return BOOKERLY_14_FONT_ID;
+        case FONT_16:
+          return BOOKERLY_16_FONT_ID;
+        case FONT_18:
+          return BOOKERLY_18_FONT_ID;
+        case FONT_20:
+        default:
+          return BOOKERLY_20_FONT_ID;
       }
   }
 }

@@ -17,6 +17,10 @@ bool isLatinLetter(uint32_t cp);
 bool isCyrillicLetter(uint32_t cp);
 
 bool isAlphabetic(uint32_t cp);
+bool isThaiCharacter(uint32_t cp);
+bool isThaiCombining(uint32_t cp);
+bool isThaiFollowingVowel(uint32_t cp);
+bool isThaiLeadingVowel(uint32_t cp);
 bool isPunctuation(uint32_t cp);
 bool isAsciiDigit(uint32_t cp);
 bool isApostrophe(uint32_t cp);

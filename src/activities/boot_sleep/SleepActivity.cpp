@@ -1,10 +1,14 @@
 #include "SleepActivity.h"
 
+#include <algorithm>
+#include <cstdio>
+
 #include <Epub.h>
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
 #include <I18n.h>
+#include <RecentBooksStore.h>
 #include <Txt.h>
 #include <Xtc.h>
 
@@ -13,6 +17,18 @@
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "images/Logo120.h"
+
+namespace {
+std::string fallbackTitleFromPath(const std::string& path) {
+  auto slash = path.find_last_of('/');
+  std::string title = slash == std::string::npos ? path : path.substr(slash + 1);
+  auto dot = title.find_last_of('.');
+  if (dot != std::string::npos) {
+    title = title.substr(0, dot);
+  }
+  return title;
+}
+}  // namespace
 
 void SleepActivity::onEnter() {
   Activity::onEnter();
@@ -25,6 +41,7 @@ void SleepActivity::onEnter() {
       return renderCustomSleepScreen();
     case (CrossPointSettings::SLEEP_SCREEN_MODE::COVER):
     case (CrossPointSettings::SLEEP_SCREEN_MODE::COVER_CUSTOM):
+    case (CrossPointSettings::SLEEP_SCREEN_MODE::HALO2_COVER):
       return renderCoverSleepScreen();
     default:
       return renderDefaultSleepScreen();
@@ -209,6 +226,112 @@ void SleepActivity::renderBitmapSleepScreen(const Bitmap& bitmap) const {
   }
 }
 
+RecentBook SleepActivity::getCurrentSleepBookData() const {
+  for (const auto& book : RECENT_BOOKS.getBooks()) {
+    if (book.path == APP_STATE.openEpubPath) {
+      RecentBook result = book;
+      if (result.title.empty()) {
+        result.title = fallbackTitleFromPath(result.path);
+      }
+      return result;
+    }
+  }
+
+  RecentBook result = RECENT_BOOKS.getDataFromBook(APP_STATE.openEpubPath);
+  result.path = APP_STATE.openEpubPath;
+  result.title = result.title.empty() ? fallbackTitleFromPath(APP_STATE.openEpubPath) : result.title;
+  return result;
+}
+
+void SleepActivity::renderHalo2SleepScreen(const Bitmap& bitmap, const RecentBook& book) const {
+  const int pageWidth = renderer.getScreenWidth();
+  const int pageHeight = renderer.getScreenHeight();
+
+  const int panelMarginX = 16;
+  const int panelMarginBottom = 16;
+  const int panelPaddingX = 14;
+  const int panelPaddingTop = 10;
+  const int panelPaddingBottom = 10;
+  const int cornerRadius = 6;
+  const int barHeight = 6;
+  const int progressGap = 8;
+  const int progressLabelWidth = renderer.getTextWidth(SMALL_FONT_ID, "100%");
+  const int titleWidth = pageWidth - (panelMarginX + panelPaddingX) * 2;
+  const bool hasGreyscale = bitmap.hasGreyscale() &&
+                            SETTINGS.sleepScreenCoverFilter == CrossPointSettings::SLEEP_SCREEN_COVER_FILTER::NO_FILTER;
+
+  std::string title = book.title.empty() ? std::string(tr(STR_UNNAMED)) : book.title;
+  auto titleLines = renderer.wrappedText(UI_10_FONT_ID, title.c_str(), titleWidth, 2, EpdFontFamily::BOLD);
+  if (titleLines.empty()) {
+    titleLines.emplace_back(tr(STR_UNNAMED));
+  }
+
+  const int titleLineHeight = renderer.getLineHeight(UI_10_FONT_ID);
+  const int titleBlockHeight = static_cast<int>(titleLines.size()) * titleLineHeight;
+  const int panelHeight = panelPaddingTop + titleBlockHeight + 8 + barHeight + panelPaddingBottom;
+  const int panelX = panelMarginX;
+  const int panelY = pageHeight - panelMarginBottom - panelHeight;
+  const int panelWidth = pageWidth - panelMarginX * 2;
+
+  auto drawOverlay = [&]() {
+    renderer.fillRoundedRect(panelX, panelY, panelWidth, panelHeight, cornerRadius, Color::Black);
+    renderer.drawRoundedRect(panelX, panelY, panelWidth, panelHeight, 1, cornerRadius, false);
+
+    int currentY = panelY + panelPaddingTop;
+    for (const auto& line : titleLines) {
+      const int lineWidth = renderer.getTextWidth(UI_10_FONT_ID, line.c_str(), EpdFontFamily::BOLD);
+      renderer.drawText(UI_10_FONT_ID, panelX + (panelWidth - lineWidth) / 2, currentY, line.c_str(), false,
+                        EpdFontFamily::BOLD);
+      currentY += titleLineHeight;
+    }
+
+    const int progressPercent = std::clamp(static_cast<int>(book.progressPercent), 0, 100);
+    char progressBuf[8];
+    snprintf(progressBuf, sizeof(progressBuf), "%d%%", progressPercent);
+    const int progressTextWidth = renderer.getTextWidth(SMALL_FONT_ID, progressBuf);
+    const int barX = panelX + panelPaddingX;
+    const int barY = panelY + panelHeight - panelPaddingBottom - barHeight;
+    const int barWidth = panelWidth - panelPaddingX * 2 - progressGap - progressLabelWidth;
+    renderer.fillRoundedRect(barX, barY, barWidth, barHeight, barHeight / 2, Color::DarkGray);
+    if (progressPercent > 0) {
+      const int fillWidth = std::max(barHeight, (barWidth * progressPercent) / 100);
+      renderer.fillRoundedRect(barX, barY, fillWidth, barHeight, barHeight / 2, Color::White);
+    }
+    const int progressTextX = barX + barWidth + progressGap + (progressLabelWidth - progressTextWidth);
+    const int progressTextY = barY + (barHeight - renderer.getLineHeight(SMALL_FONT_ID)) / 2;
+    renderer.drawText(SMALL_FONT_ID, progressTextX, progressTextY, progressBuf, false);
+  };
+
+  renderer.clearScreen();
+  renderer.drawBitmap(bitmap, 0, 0, pageWidth, pageHeight);
+  drawOverlay();
+
+  if (SETTINGS.sleepScreenCoverFilter == CrossPointSettings::SLEEP_SCREEN_COVER_FILTER::INVERTED_BLACK_AND_WHITE) {
+    renderer.invertScreen();
+  }
+
+  renderer.displayBuffer(HalDisplay::HALF_REFRESH);
+
+  if (hasGreyscale) {
+    bitmap.rewindToData();
+    renderer.clearScreen(0x00);
+    renderer.setRenderMode(GfxRenderer::GRAYSCALE_LSB);
+    renderer.drawBitmap(bitmap, 0, 0, pageWidth, pageHeight);
+    drawOverlay();
+    renderer.copyGrayscaleLsbBuffers();
+
+    bitmap.rewindToData();
+    renderer.clearScreen(0x00);
+    renderer.setRenderMode(GfxRenderer::GRAYSCALE_MSB);
+    renderer.drawBitmap(bitmap, 0, 0, pageWidth, pageHeight);
+    drawOverlay();
+    renderer.copyGrayscaleMsbBuffers();
+
+    renderer.displayGrayBuffer();
+    renderer.setRenderMode(GfxRenderer::BW);
+  }
+}
+
 void SleepActivity::renderCoverSleepScreen() const {
   void (SleepActivity::*renderNoCoverSleepScreen)() const;
   switch (SETTINGS.sleepScreen) {
@@ -224,13 +347,41 @@ void SleepActivity::renderCoverSleepScreen() const {
     return (this->*renderNoCoverSleepScreen)();
   }
 
+  const bool useHalo2Layout = SETTINGS.sleepScreen == CrossPointSettings::SLEEP_SCREEN_MODE::HALO2_COVER;
+  const RecentBook currentBook = useHalo2Layout ? getCurrentSleepBookData() : RecentBook{};
   std::string coverBmpPath;
-  bool cropped = SETTINGS.sleepScreenCoverMode == CrossPointSettings::SLEEP_SCREEN_COVER_MODE::CROP;
+  bool cropped = useHalo2Layout || SETTINGS.sleepScreenCoverMode == CrossPointSettings::SLEEP_SCREEN_COVER_MODE::CROP;
+  auto tryRenderCachedCover = [&](const std::string& bmpPath) -> bool {
+    FsFile file;
+    if (!Storage.openFileForRead("SLP", bmpPath, file)) {
+      return false;
+    }
+
+    Bitmap bitmap(file);
+    if (bitmap.parseHeaders() != BmpReaderError::Ok) {
+      file.close();
+      return false;
+    }
+
+    LOG_DBG("SLP", "Rendering cached sleep cover: %s", bmpPath.c_str());
+    if (useHalo2Layout) {
+      renderHalo2SleepScreen(bitmap, currentBook);
+    } else {
+      renderBitmapSleepScreen(bitmap);
+    }
+    file.close();
+    return true;
+  };
 
   // Check if the current book is XTC, TXT, or EPUB
   if (FsHelpers::hasXtcExtension(APP_STATE.openEpubPath)) {
     // Handle XTC file
     Xtc lastXtc(APP_STATE.openEpubPath, "/.crosspoint");
+    coverBmpPath = lastXtc.getCoverBmpPath();
+    if (tryRenderCachedCover(coverBmpPath)) {
+      return;
+    }
+
     if (!lastXtc.load()) {
       LOG_ERR("SLP", "Failed to load last XTC");
       return (this->*renderNoCoverSleepScreen)();
@@ -241,10 +392,14 @@ void SleepActivity::renderCoverSleepScreen() const {
       return (this->*renderNoCoverSleepScreen)();
     }
 
-    coverBmpPath = lastXtc.getCoverBmpPath();
   } else if (FsHelpers::hasTxtExtension(APP_STATE.openEpubPath)) {
     // Handle TXT file - looks for cover image in the same folder
     Txt lastTxt(APP_STATE.openEpubPath, "/.crosspoint");
+    coverBmpPath = lastTxt.getCoverBmpPath();
+    if (tryRenderCachedCover(coverBmpPath)) {
+      return;
+    }
+
     if (!lastTxt.load()) {
       LOG_ERR("SLP", "Failed to load last TXT");
       return (this->*renderNoCoverSleepScreen)();
@@ -255,10 +410,14 @@ void SleepActivity::renderCoverSleepScreen() const {
       return (this->*renderNoCoverSleepScreen)();
     }
 
-    coverBmpPath = lastTxt.getCoverBmpPath();
   } else if (FsHelpers::hasEpubExtension(APP_STATE.openEpubPath)) {
     // Handle EPUB file
     Epub lastEpub(APP_STATE.openEpubPath, "/.crosspoint");
+    coverBmpPath = lastEpub.getCoverBmpPath(cropped);
+    if (tryRenderCachedCover(coverBmpPath)) {
+      return;
+    }
+
     // Skip loading css since we only need metadata here
     if (!lastEpub.load(true, true)) {
       LOG_ERR("SLP", "Failed to load last epub");
@@ -270,21 +429,12 @@ void SleepActivity::renderCoverSleepScreen() const {
       return (this->*renderNoCoverSleepScreen)();
     }
 
-    coverBmpPath = lastEpub.getCoverBmpPath(cropped);
   } else {
     return (this->*renderNoCoverSleepScreen)();
   }
 
-  FsFile file;
-  if (Storage.openFileForRead("SLP", coverBmpPath, file)) {
-    Bitmap bitmap(file);
-    if (bitmap.parseHeaders() == BmpReaderError::Ok) {
-      LOG_DBG("SLP", "Rendering sleep cover: %s", coverBmpPath.c_str());
-      renderBitmapSleepScreen(bitmap);
-      file.close();
-      return;
-    }
-    file.close();
+  if (tryRenderCachedCover(coverBmpPath)) {
+    return;
   }
 
   return (this->*renderNoCoverSleepScreen)();

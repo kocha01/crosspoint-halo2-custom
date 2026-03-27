@@ -487,10 +487,10 @@ void BaseTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
     // - With cover: selected = white text on black box, unselected = black text on white box
     // - Without cover: selected = white text on black card, unselected = black text on white card
 
-    auto lines = renderer.wrappedText(UI_12_FONT_ID, lastBookTitle.c_str(), bookWidth - 40, 3);
+    auto lines = renderer.wrappedText(UI_10_FONT_ID, lastBookTitle.c_str(), bookWidth - 40, 3);
 
     // Book title text
-    int totalTextHeight = renderer.getLineHeight(UI_12_FONT_ID) * static_cast<int>(lines.size());
+    int totalTextHeight = renderer.getLineHeight(UI_10_FONT_ID) * static_cast<int>(lines.size());
     if (!lastBookAuthor.empty()) {
       totalTextHeight += renderer.getLineHeight(UI_10_FONT_ID) * 3 / 2;
     }
@@ -508,7 +508,7 @@ void BaseTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
       // Calculate the max text width for the box
       int maxTextWidth = 0;
       for (const auto& line : lines) {
-        const int lineWidth = renderer.getTextWidth(UI_12_FONT_ID, line.c_str());
+        const int lineWidth = renderer.getTextWidth(UI_10_FONT_ID, line.c_str());
         if (lineWidth > maxTextWidth) {
           maxTextWidth = lineWidth;
         }
@@ -532,8 +532,8 @@ void BaseTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
     }
 
     for (const auto& line : lines) {
-      renderer.drawCenteredText(UI_12_FONT_ID, titleYStart, line.c_str(), !bookSelected);
-      titleYStart += renderer.getLineHeight(UI_12_FONT_ID);
+      renderer.drawCenteredText(UI_10_FONT_ID, titleYStart, line.c_str(), !bookSelected);
+      titleYStart += renderer.getLineHeight(UI_10_FONT_ID);
     }
 
     if (!truncatedAuthor.empty()) {
@@ -690,14 +690,17 @@ void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, c
   // Draw Title
   if (!title.empty()) {
     textY -= textYOffset;
+    const int titleFontId = SMALL_FONT_ID;
+
     // Centered chapter title text
     // Page width minus existing content with 30px padding on each side
     const int rendererableScreenWidth =
         renderer.getScreenWidth() - (metrics.statusBarHorizontalMargin * 2) - orientedMarginLeft - orientedMarginRight;
 
     const int batterySize = SETTINGS.statusBarBattery ? (showBatteryPercentage ? 50 : 20) : 0;
-    const int titleMarginLeft = batterySize + 30;
-    const int titleMarginRight = progressTextWidth + 30;
+    const int sideInset = 30;
+    const int titleMarginLeft = batterySize + sideInset;
+    const int titleMarginRight = progressTextWidth + sideInset;
 
     // Attempt to center title on the screen, but if title is too wide then later we will center it within the
     // available space.
@@ -705,18 +708,18 @@ void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, c
     int availableTitleSpace = rendererableScreenWidth - 2 * titleMarginLeftAdjusted;
 
     int titleWidth;
-    titleWidth = renderer.getTextWidth(SMALL_FONT_ID, title.c_str());
+    titleWidth = renderer.getTextWidth(titleFontId, title.c_str());
     if (titleWidth > availableTitleSpace) {
       // Not enough space to center on the screen, center it within the remaining space instead
       availableTitleSpace = rendererableScreenWidth - titleMarginLeft - titleMarginRight;
       titleMarginLeftAdjusted = titleMarginLeft;
     }
     if (titleWidth > availableTitleSpace) {
-      title = renderer.truncatedText(SMALL_FONT_ID, title.c_str(), availableTitleSpace);
-      titleWidth = renderer.getTextWidth(SMALL_FONT_ID, title.c_str());
+      title = renderer.truncatedText(titleFontId, title.c_str(), availableTitleSpace);
+      titleWidth = renderer.getTextWidth(titleFontId, title.c_str());
     }
 
-    renderer.drawText(SMALL_FONT_ID,
+    renderer.drawText(titleFontId,
                       titleMarginLeftAdjusted + metrics.statusBarHorizontalMargin + orientedMarginLeft +
                           (availableTitleSpace - titleWidth) / 2,
                       textY, title.c_str());

@@ -12,9 +12,10 @@ struct Rect;
 class HomeActivity final : public Activity {
   ButtonNavigator buttonNavigator;
   int selectorIndex = 0;
+  int lastMenuCol = 0;   // Remember last menu column when switching between books and menu
+  int lastBookIndex = 0; // Remember last selected book when switching to menu
   bool recentsLoading = false;
   bool recentsLoaded = false;
-  bool firstRenderDone = false;
   bool hasOpdsUrl = false;
   bool coverRendered = false;      // Track if cover has been rendered once
   bool coverBufferStored = false;  // Track if cover buffer is stored

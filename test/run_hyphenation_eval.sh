@@ -10,6 +10,7 @@ mkdir -p "$BUILD_DIR"
 SOURCES=(
   "$ROOT_DIR/test/hyphenation_eval/HyphenationEvaluationTest.cpp"
   "$ROOT_DIR/lib/Epub/Epub/hyphenation/Hyphenator.cpp"
+  "$ROOT_DIR/lib/Epub/Epub/hyphenation/ThaiWordBreaker.cpp"
   "$ROOT_DIR/lib/Epub/Epub/hyphenation/LanguageRegistry.cpp"
   "$ROOT_DIR/lib/Epub/Epub/hyphenation/LiangHyphenation.cpp"
   "$ROOT_DIR/lib/Epub/Epub/hyphenation/HyphenationCommon.cpp"

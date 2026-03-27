@@ -8,14 +8,50 @@
 
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
+#include "activities/util/ConfirmationActivity.h"
+#include "components/themes/modern/ModernTheme.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
 namespace {
 constexpr unsigned long GO_HOME_MS = 1000;
+
+void drawPowerRemoveHint(const GfxRenderer& renderer, const ThemeMetrics& metrics, const int pageWidth,
+                         const char* label) {
+  if (label == nullptr || label[0] == '\0') {
+    return;
+  }
+
+  constexpr int hintInset = 8;
+  constexpr int hintRadius = 8;
+  constexpr int minHintHeight = 58;
+  constexpr int verticalPadding = 10;
+  constexpr int horizontalPadding = 7;
+  constexpr int rightInset = -6;
+  constexpr int downOffset = 19;
+
+  const int halo2HintWidth = std::max(ModernMetrics::values.sideButtonHintsWidth + 10, 30);
+  const int hintWidth =
+      (SETTINGS.uiTheme == CrossPointSettings::MODERN) ? std::max(metrics.sideButtonHintsWidth + 10, 30) : halo2HintWidth;
+  const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, label);
+  const int textHeight = renderer.getTextHeight(SMALL_FONT_ID);
+  const int hintHeight = std::max(minHintHeight, textWidth + verticalPadding * 2);
+  const int hintX = pageWidth - hintWidth - rightInset;
+  const int hintY = metrics.topPadding + metrics.headerHeight + hintInset + downOffset;
+  const int preferredTextX = hintX + (hintWidth - textHeight) / 2;
+  const int maxVisibleTextX = pageWidth - textHeight - horizontalPadding;
+  const int textX = std::min(preferredTextX, maxVisibleTextX);
+  const int textY = hintY + (hintHeight + textWidth) / 2;
+
+  renderer.fillRoundedRect(hintX, hintY, hintWidth, hintHeight, hintRadius, true, false, true, false, Color::White);
+  renderer.drawRoundedRect(hintX, hintY, hintWidth, hintHeight, 1, hintRadius, true, false, true, false, true);
+  renderer.drawTextRotated90CW(SMALL_FONT_ID, textX, textY, label);
+}
 }  // namespace
 
 void RecentBooksActivity::loadRecentBooks() {
+  RECENT_BOOKS.pruneMissingBooks();
+
   recentBooks.clear();
   const auto& books = RECENT_BOOKS.getBooks();
   recentBooks.reserve(books.size());
@@ -44,8 +80,42 @@ void RecentBooksActivity::onExit() {
   recentBooks.clear();
 }
 
+void RecentBooksActivity::removeSelectedRecentBook() {
+  if (recentBooks.empty() || selectorIndex >= recentBooks.size()) {
+    return;
+  }
+
+  const auto selectedBook = recentBooks[selectorIndex];
+  auto handler = [this, selectedBook](const ActivityResult& res) {
+    if (res.isCancelled) {
+      return;
+    }
+
+    if (RECENT_BOOKS.removeBook(selectedBook.path)) {
+      loadRecentBooks();
+      if (recentBooks.empty()) {
+        selectorIndex = 0;
+      } else if (selectorIndex >= recentBooks.size()) {
+        selectorIndex = recentBooks.size() - 1;
+      }
+      requestUpdate(true);
+    }
+  };
+
+  std::string heading = tr(STR_REMOVE_FROM_RECENT);
+  startActivityForResult(std::make_unique<ConfirmationActivity>(renderer, mappedInput, heading, selectedBook.title),
+                         handler);
+}
+
 void RecentBooksActivity::loop() {
   const int pageItems = UITheme::getInstance().getNumberOfItemsPerPage(renderer, true, false, true, true);
+
+  if (mappedInput.wasReleased(MappedInputManager::Button::Power)) {
+    if (!recentBooks.empty() && selectorIndex < static_cast<int>(recentBooks.size())) {
+      removeSelectedRecentBook();
+      return;
+    }
+  }
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     if (!recentBooks.empty() && selectorIndex < static_cast<int>(recentBooks.size())) {
@@ -107,6 +177,10 @@ void RecentBooksActivity::render(RenderLock&&) {
   // Help text
   const auto labels = mappedInput.mapLabels(tr(STR_HOME), tr(STR_OPEN), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+
+  if (!recentBooks.empty()) {
+    drawPowerRemoveHint(renderer, metrics, pageWidth, "Remove");
+  }
 
   renderer.displayBuffer();
 }

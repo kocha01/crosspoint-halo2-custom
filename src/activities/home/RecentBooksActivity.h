@@ -20,6 +20,7 @@ class RecentBooksActivity final : public Activity {
 
   // Data loading
   void loadRecentBooks();
+  void removeSelectedRecentBook();
 
  public:
   explicit RecentBooksActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)

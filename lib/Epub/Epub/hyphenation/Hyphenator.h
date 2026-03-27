@@ -28,9 +28,11 @@ class Hyphenator {
   //      A direct break at the apostrophe boundary is allowed only when the left
   //      segment has at least 3 letters and the right segment has at least 3 letters,
   //      avoiding short clitics (e.g. l', d') and contraction tails (e.g. 've, 're, 'll).
-  //   3. Language-specific Liang patterns (e.g. German de_patterns).
+  //   3. Thai dictionary word boundaries (no inserted hyphens).
+  //      Example: "ขับเคลื่อนแทน" -> ขับเคลื่อน|แทน.
+  //   4. Language-specific Liang patterns (e.g. German de_patterns).
   //      Example: "Quadratkilometer" -> Qua|drat|ki|lo|me|ter.
-  //   4. Fallback every-N-chars splitting (only when includeFallback is true AND no
+  //   5. Fallback every-N-chars splitting (only when includeFallback is true AND no
   //      pattern breaks were found). Used as a last resort to prevent a single oversized
   //      word from overflowing the page width.
   static std::vector<BreakInfo> breakOffsets(const std::string& word, bool includeFallback);

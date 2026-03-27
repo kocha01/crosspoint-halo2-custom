@@ -19,7 +19,7 @@ class Page;
 class GfxRenderer;
 class Epub;
 
-#define MAX_WORD_SIZE 200
+#define MAX_WORD_SIZE 1024
 
 class ChapterHtmlSlimParser {
   std::shared_ptr<Epub> epub;
@@ -49,6 +49,7 @@ class ChapterHtmlSlimParser {
   bool hyphenationEnabled;
   const CssParser* cssParser;
   bool embeddedStyle;
+  bool forceBold;  // Force all text to bold when enabled
   uint8_t imageRendering;
   std::string contentBase;
   std::string imageBasePath;
@@ -102,7 +103,8 @@ class ChapterHtmlSlimParser {
                                  const std::function<void(std::unique_ptr<Page>)>& completePageFn,
                                  const bool embeddedStyle, const std::string& contentBase,
                                  const std::string& imageBasePath, const uint8_t imageRendering = 0,
-                                 const std::function<void()>& popupFn = nullptr, const CssParser* cssParser = nullptr)
+                                 const std::function<void()>& popupFn = nullptr, const CssParser* cssParser = nullptr,
+                                 const bool forceBold = false)
 
       : epub(epub),
         filepath(filepath),
@@ -118,6 +120,7 @@ class ChapterHtmlSlimParser {
         popupFn(popupFn),
         cssParser(cssParser),
         embeddedStyle(embeddedStyle),
+        forceBold(forceBold),
         imageRendering(imageRendering),
         contentBase(contentBase),
         imageBasePath(imageBasePath) {}

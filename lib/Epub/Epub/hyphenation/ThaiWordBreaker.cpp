@@ -1,0 +1,265 @@
+#include "ThaiWordBreaker.h"
+
+#include <algorithm>
+#include <cstdint>
+#include <limits>
+#include <vector>
+
+#include "generated/thai_word_dawg.h"
+
+namespace {
+
+struct MatchEdge {
+  size_t endIndex;
+};
+
+struct Score {
+  int unknownCodepoints = std::numeric_limits<int>::max();
+  int unknownRuns = std::numeric_limits<int>::max();
+  int segmentCount = std::numeric_limits<int>::max();
+  int negativeMatchedSquareSum = std::numeric_limits<int>::max();
+};
+
+struct Decision {
+  size_t nextIndex = 0;
+  bool isKnownWord = false;
+  bool valid = false;
+  Score score;
+};
+
+struct Segment {
+  size_t start = 0;
+  size_t end = 0;
+  bool isKnownWord = false;
+};
+
+bool isTerminalNode(const uint16_t nodeIndex) {
+  return (thai_word_dawg::kNodeTerminalBits[nodeIndex / 8] >> (nodeIndex % 8)) & 0x01u;
+}
+
+bool isBetterScore(const Score& candidate, const Score& current, const size_t candidateLength,
+                   const size_t currentLength) {
+  if (candidate.unknownCodepoints != current.unknownCodepoints) {
+    return candidate.unknownCodepoints < current.unknownCodepoints;
+  }
+  if (candidate.unknownRuns != current.unknownRuns) {
+    return candidate.unknownRuns < current.unknownRuns;
+  }
+  if (candidate.segmentCount != current.segmentCount) {
+    return candidate.segmentCount < current.segmentCount;
+  }
+  if (candidate.negativeMatchedSquareSum != current.negativeMatchedSquareSum) {
+    return candidate.negativeMatchedSquareSum < current.negativeMatchedSquareSum;
+  }
+  return candidateLength > currentLength;
+}
+
+bool isValidThaiBoundary(const uint32_t prevCp, const uint32_t cp) {
+  if (isThaiCombining(cp)) return false;
+  if (isThaiFollowingVowel(cp)) return false;
+  if (isThaiLeadingVowel(prevCp)) return false;
+  return true;
+}
+
+std::vector<bool> buildBoundaryFlags(const std::vector<CodepointInfo>& cps) {
+  std::vector<bool> boundaries(cps.size() + 1, false);
+  boundaries.front() = true;
+  boundaries.back() = true;
+
+  for (size_t idx = 1; idx < cps.size(); ++idx) {
+    boundaries[idx] = isValidThaiBoundary(cps[idx - 1].value, cps[idx].value);
+  }
+
+  return boundaries;
+}
+
+size_t nextBoundaryIndex(const std::vector<bool>& boundaries, const size_t from) {
+  for (size_t idx = from + 1; idx < boundaries.size(); ++idx) {
+    if (boundaries[idx]) {
+      return idx;
+    }
+  }
+  return boundaries.size() - 1;
+}
+
+void collectDictionaryMatchEnds(const std::vector<CodepointInfo>& cps, const size_t start,
+                                const std::vector<bool>& boundaries, std::vector<MatchEdge>& outMatches) {
+  if (start >= cps.size() || !isThaiCharacter(cps[start].value)) {
+    return;
+  }
+
+  uint16_t nodeIndex = thai_word_dawg::kRootNode;
+  size_t pos = start;
+
+  while (pos < cps.size()) {
+    const uint32_t cp = cps[pos].value;
+    if (!isThaiCharacter(cp)) {
+      break;
+    }
+
+    const uint8_t symbol = static_cast<uint8_t>(cp - 0x0E00u);
+    bool advanced = false;
+
+    const uint32_t firstEdge = thai_word_dawg::kNodeFirstEdge[nodeIndex];
+    const uint8_t edgeCount = thai_word_dawg::kNodeEdgeCount[nodeIndex];
+
+    for (uint32_t edgeIdx = firstEdge; edgeIdx < firstEdge + edgeCount; ++edgeIdx) {
+      const auto& edge = thai_word_dawg::kEdges[edgeIdx];
+      const uint8_t* label = thai_word_dawg::kLabelData + edge.labelOffset;
+      if (label[0] != symbol) {
+        continue;
+      }
+
+      size_t scan = pos;
+      bool matched = true;
+      for (uint8_t labelIdx = 0; labelIdx < edge.labelLength; ++labelIdx) {
+        if (scan >= cps.size() || !isThaiCharacter(cps[scan].value) ||
+            static_cast<uint8_t>(cps[scan].value - 0x0E00u) != label[labelIdx]) {
+          matched = false;
+          break;
+        }
+        ++scan;
+      }
+
+      if (!matched) {
+        continue;
+      }
+
+      nodeIndex = edge.childIndex;
+      pos = scan;
+      advanced = true;
+
+      if (isTerminalNode(nodeIndex) && boundaries[pos]) {
+        outMatches.push_back({pos});
+      }
+      break;
+    }
+
+    if (!advanced) {
+      break;
+    }
+  }
+}
+
+std::vector<Segment> buildSegments(const std::vector<Decision>& decisions, const size_t length) {
+  std::vector<Segment> segments;
+  size_t index = 0;
+
+  while (index < length) {
+    const auto& decision = decisions[index];
+    if (!decision.valid || decision.nextIndex <= index) {
+      break;
+    }
+
+    if (!segments.empty() && !decision.isKnownWord && !segments.back().isKnownWord && segments.back().end == index) {
+      segments.back().end = decision.nextIndex;
+    } else {
+      segments.push_back({index, decision.nextIndex, decision.isKnownWord});
+    }
+
+    index = decision.nextIndex;
+  }
+
+  return segments;
+}
+
+}  // namespace
+
+std::vector<size_t> ThaiWordBreaker::breakIndexes(const std::vector<CodepointInfo>& cps, const bool includeFallback) {
+  if (cps.size() < 2) {
+    return {};
+  }
+
+  const auto boundaries = buildBoundaryFlags(cps);
+  std::vector<Decision> decisions(cps.size() + 1);
+  decisions[cps.size()].valid = true;
+  decisions[cps.size()].score = {0, 0, 0, 0};
+
+  std::vector<MatchEdge> matches;
+
+  for (size_t i = cps.size(); i-- > 0;) {
+    if (!boundaries[i]) {
+      continue;
+    }
+
+    matches.clear();
+    collectDictionaryMatchEnds(cps, i, boundaries, matches);
+
+    Decision best;
+
+    for (auto it = matches.rbegin(); it != matches.rend(); ++it) {
+      const size_t end = it->endIndex;
+      const auto& suffix = decisions[end];
+      if (!suffix.valid) {
+        continue;
+      }
+
+      Decision candidate;
+      candidate.valid = true;
+      candidate.isKnownWord = true;
+      candidate.nextIndex = end;
+      candidate.score = suffix.score;
+      candidate.score.segmentCount += 1;
+      const size_t length = end - i;
+      candidate.score.negativeMatchedSquareSum -= static_cast<int>(length * length);
+
+      if (!best.valid || isBetterScore(candidate.score, best.score, candidate.nextIndex - i, best.nextIndex - i)) {
+        best = candidate;
+      }
+    }
+
+    const size_t fallbackEnd = nextBoundaryIndex(boundaries, i);
+    if (fallbackEnd > i) {
+      const auto& suffix = decisions[fallbackEnd];
+      if (suffix.valid) {
+        Decision candidate;
+        candidate.valid = true;
+        candidate.isKnownWord = false;
+        candidate.nextIndex = fallbackEnd;
+        candidate.score = suffix.score;
+        candidate.score.unknownCodepoints += static_cast<int>(fallbackEnd - i);
+        candidate.score.unknownRuns += 1;
+        candidate.score.segmentCount += 1;
+
+        if (!best.valid || isBetterScore(candidate.score, best.score, candidate.nextIndex - i, best.nextIndex - i)) {
+          best = candidate;
+        }
+      }
+    }
+
+    decisions[i] = best;
+  }
+
+  if (!decisions[0].valid) {
+    return {};
+  }
+
+  const auto segments = buildSegments(decisions, cps.size());
+  if (segments.empty()) {
+    return {};
+  }
+
+  std::vector<size_t> breaks;
+  breaks.reserve(cps.size());
+
+  for (size_t idx = 0; idx + 1 < segments.size(); ++idx) {
+    breaks.push_back(segments[idx].end);
+  }
+
+  if (includeFallback) {
+    for (const auto& segment : segments) {
+      if (segment.isKnownWord || segment.end - segment.start < 2) {
+        continue;
+      }
+      for (size_t idx = segment.start + 1; idx < segment.end; ++idx) {
+        if (boundaries[idx]) {
+          breaks.push_back(idx);
+        }
+      }
+    }
+  }
+
+  std::sort(breaks.begin(), breaks.end());
+  breaks.erase(std::unique(breaks.begin(), breaks.end()), breaks.end());
+  return breaks;
+}

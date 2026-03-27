@@ -11,6 +11,7 @@
 #include "../Page.h"
 #include "../converters/ImageDecoderFactory.h"
 #include "../converters/ImageToFramebufferDecoder.h"
+#include "../hyphenation/Hyphenator.h"
 #include "../htmlEntities.h"
 
 const char* HEADER_TAGS[] = {"h1", "h2", "h3", "h4", "h5", "h6"};
@@ -39,6 +40,18 @@ const char* SKIP_TAGS[] = {"head"};
 constexpr int NUM_SKIP_TAGS = sizeof(SKIP_TAGS) / sizeof(SKIP_TAGS[0]);
 
 bool isWhitespace(const char c) { return c == ' ' || c == '\r' || c == '\n' || c == '\t'; }
+constexpr char ZERO_WIDTH_SPACE_UTF8[] = "\xE2\x80\x8B";
+
+bool containsThaiCodepoint(const std::string& text) {
+  const auto* ptr = reinterpret_cast<const unsigned char*>(text.c_str());
+  uint32_t cp = 0;
+  while ((cp = utf8NextCodepoint(&ptr)) != 0) {
+    if (utf8IsThaiCodepoint(cp)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 // given the start and end of a tag, check to see if it matches a known tag
 bool matches(const char* tag_name, const char* possible_tags[], const int possible_tag_count) {
@@ -101,7 +114,7 @@ void ChapterHtmlSlimParser::updateEffectiveInlineStyle() {
 // flush the contents of partWordBuffer to currentTextBlock
 void ChapterHtmlSlimParser::flushPartWordBuffer() {
   // Determine font style from depth-based tracking and CSS effective style
-  const bool isBold = boldUntilDepth < depth || effectiveBold;
+  const bool isBold = forceBold || boldUntilDepth < depth || effectiveBold;
   const bool isItalic = italicUntilDepth < depth || effectiveItalic;
   const bool isUnderline = underlineUntilDepth < depth || effectiveUnderline;
 
@@ -117,9 +130,40 @@ void ChapterHtmlSlimParser::flushPartWordBuffer() {
     fontStyle = static_cast<EpdFontFamily::Style>(fontStyle | EpdFontFamily::UNDERLINE);
   }
 
-  // flush the buffer
+  // Flush the buffer.
+  // For Thai runs, eagerly split them into dictionary-based word tokens separated by
+  // internal zero-width break markers. This keeps the EPUB pipeline firmware-only:
+  // books remain untouched, but ParsedText can still break Thai text at word boundaries
+  // without injecting visible spaces.
   partWordBuffer[partWordBufferIndex] = '\0';
-  currentTextBlock->addWord(partWordBuffer, fontStyle, false, nextWordContinues);
+  const std::string bufferedWord(partWordBuffer, partWordBufferIndex);
+
+  if (!bufferedWord.empty() && containsThaiCodepoint(bufferedWord)) {
+    const auto breakInfos = Hyphenator::breakOffsets(bufferedWord, /*includeFallback=*/false);
+    size_t segmentStart = 0;
+    bool firstSegment = true;
+
+    for (const auto& info : breakInfos) {
+      if (info.byteOffset <= segmentStart || info.byteOffset >= bufferedWord.size()) {
+        continue;
+      }
+
+      currentTextBlock->addWord(bufferedWord.substr(segmentStart, info.byteOffset - segmentStart), fontStyle, false,
+                                firstSegment ? nextWordContinues : false);
+      currentTextBlock->addWord(ZERO_WIDTH_SPACE_UTF8, fontStyle, false, true);
+      segmentStart = info.byteOffset;
+      firstSegment = false;
+    }
+
+    if (!firstSegment && segmentStart < bufferedWord.size()) {
+      currentTextBlock->addWord(bufferedWord.substr(segmentStart), fontStyle, false, false);
+      partWordBufferIndex = 0;
+      nextWordContinues = false;
+      return;
+    }
+  }
+
+  currentTextBlock->addWord(bufferedWord, fontStyle, false, nextWordContinues);
   partWordBufferIndex = 0;
   nextWordContinues = false;
 }
@@ -745,6 +789,37 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
       continue;
     }
 
+    // Preserve Zero Width Space (U+200B) as an explicit "break allowed, no visible gap" marker.
+    //
+    // We emit it as its own zero-width token that attaches to the previous word. The following
+    // word does not attach back to it, which gives ParsedText a legal break opportunity after the
+    // marker while keeping the on-line rendering gapless.
+    if (static_cast<uint8_t>(s[i]) == 0xE2 && i + 2 < len && static_cast<uint8_t>(s[i + 1]) == 0x80 &&
+        static_cast<uint8_t>(s[i + 2]) == 0x8B) {
+      if (self->partWordBufferIndex > 0) {
+        self->flushPartWordBuffer();
+      }
+
+      self->partWordBuffer[0] = static_cast<char>(0xE2);
+      self->partWordBuffer[1] = static_cast<char>(0x80);
+      self->partWordBuffer[2] = static_cast<char>(0x8B);
+      self->partWordBuffer[3] = '\0';
+      self->partWordBufferIndex = 3;
+      self->nextWordContinues = true;
+      self->flushPartWordBuffer();
+
+      i += 2;
+      continue;
+    }
+
+    // Skip Word Joiner (U+2060) = 0xE2 0x81 0xA0.
+    // This invisible control should not become part of a visible word token.
+    if (static_cast<uint8_t>(s[i]) == 0xE2 && i + 2 < len && static_cast<uint8_t>(s[i + 1]) == 0x81 &&
+        static_cast<uint8_t>(s[i + 2]) == 0xA0) {
+      i += 2;
+      continue;
+    }
+
     // Skip Zero Width No-Break Space / BOM (U+FEFF) = 0xEF 0xBB 0xBF
     const XML_Char FEFF_BYTE_1 = static_cast<XML_Char>(0xEF);
     const XML_Char FEFF_BYTE_2 = static_cast<XML_Char>(0xBB);
@@ -776,12 +851,17 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
         }
         self->partWordBufferIndex = safeLen;
         self->flushPartWordBuffer();
+        // Buffer overflow is an artificial split inside the same whitespace-free run.
+        // Keep the next fragment attached so layout does not treat it as a real word boundary.
+        self->nextWordContinues = true;
         for (int j = 0; j < overflow; j++) {
           self->partWordBuffer[j] = saved[j];
         }
         self->partWordBufferIndex = overflow;
       } else {
         self->flushPartWordBuffer();
+        // Same rationale as above: this split comes from the parser buffer limit, not from source whitespace.
+        self->nextWordContinues = true;
       }
     }
 

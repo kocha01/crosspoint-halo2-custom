@@ -6,6 +6,7 @@
 #include <Logging.h>
 
 #include "MappedInputManager.h"
+#include "RecentBooksStore.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -25,31 +26,64 @@ void ClearCacheActivity::render(RenderLock&&) {
 
   renderer.clearScreen();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_CLEAR_READING_CACHE));
+  const char* title = tr(STR_CLEAR_READING_CACHE);
+  if (mode == Mode::RefreshRecents) {
+    title = tr(STR_REFRESH_RECENT_BOOKS);
+  } else if (mode == Mode::ClearRecents) {
+    title = tr(STR_CLEAR_RECENT_BOOKS);
+  }
+  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, title);
 
   if (state == WARNING) {
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 60, tr(STR_CLEAR_CACHE_WARNING_1), true);
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 30, tr(STR_CLEAR_CACHE_WARNING_2), true,
-                              EpdFontFamily::BOLD);
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 10, tr(STR_CLEAR_CACHE_WARNING_3), true);
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 30, tr(STR_CLEAR_CACHE_WARNING_4), true);
+    if (mode == Mode::RefreshRecents) {
+      renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 40, tr(STR_REFRESH_RECENT_BOOKS_WARNING_1), true);
+      renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 10, tr(STR_REFRESH_RECENT_BOOKS_WARNING_2), true,
+                                EpdFontFamily::BOLD);
+      renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 20, tr(STR_REFRESH_RECENT_BOOKS_WARNING_3), true);
+    } else if (mode == Mode::ClearRecents) {
+      renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 40, tr(STR_CLEAR_RECENT_BOOKS_WARNING_1), true);
+      renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 10, tr(STR_CLEAR_RECENT_BOOKS_WARNING_2), true,
+                                EpdFontFamily::BOLD);
+      renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 20, tr(STR_CLEAR_RECENT_BOOKS_WARNING_3), true);
+    } else {
+      renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 60, tr(STR_CLEAR_CACHE_WARNING_1), true);
+      renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 30, tr(STR_CLEAR_CACHE_WARNING_2), true,
+                                EpdFontFamily::BOLD);
+      renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 10, tr(STR_CLEAR_CACHE_WARNING_3), true);
+      renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 30, tr(STR_CLEAR_CACHE_WARNING_4), true);
+    }
 
-    const auto labels = mappedInput.mapLabels(tr(STR_CANCEL), tr(STR_CLEAR_BUTTON), "", "");
+    const char* confirmLabel =
+        (mode == Mode::RefreshRecents) ? tr(STR_REFRESH) : tr(STR_CLEAR_BUTTON);
+    const auto labels = mappedInput.mapLabels(tr(STR_CANCEL), confirmLabel, "", "");
     GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
 
   if (state == CLEARING) {
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2, tr(STR_CLEARING_CACHE));
+    const char* clearingText = tr(STR_CLEARING_CACHE);
+    if (mode == Mode::RefreshRecents) {
+      clearingText = tr(STR_REFRESHING_RECENT_BOOKS);
+    } else if (mode == Mode::ClearRecents) {
+      clearingText = tr(STR_CLEARING_RECENT_BOOKS);
+    }
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2, clearingText);
     renderer.displayBuffer();
     return;
   }
 
   if (state == SUCCESS) {
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 20, tr(STR_CACHE_CLEARED), true, EpdFontFamily::BOLD);
-    std::string resultText = std::to_string(clearedCount) + " " + std::string(tr(STR_ITEMS_REMOVED));
-    if (failedCount > 0) {
+    const char* successText = tr(STR_CACHE_CLEARED);
+    if (mode == Mode::RefreshRecents) {
+      successText = tr(STR_RECENT_BOOKS_REFRESHED);
+    } else if (mode == Mode::ClearRecents) {
+      successText = tr(STR_RECENT_BOOKS_CLEARED);
+    }
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 20, successText, true, EpdFontFamily::BOLD);
+    const int totalRemoved = clearedCount + removedRecentCount;
+    std::string resultText = std::to_string(totalRemoved) + " " + std::string(tr(STR_ITEMS_REMOVED));
+    if (failedCount > 0 && mode == Mode::ReadingCache) {
       resultText += ", " + std::to_string(failedCount) + " " + std::string(tr(STR_FAILED_LOWER));
     }
     renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 10, resultText.c_str());
@@ -73,6 +107,28 @@ void ClearCacheActivity::render(RenderLock&&) {
 }
 
 void ClearCacheActivity::clearCache() {
+  removedRecentCount = 0;
+
+  if (mode == Mode::RefreshRecents) {
+    removedRecentCount = RECENT_BOOKS.pruneMissingBooks();
+    LOG_DBG("CLEAR_CACHE", "Refreshed recents: %d removed", removedRecentCount);
+    clearedCount = 0;
+    failedCount = 0;
+    state = SUCCESS;
+    requestUpdate();
+    return;
+  }
+
+  if (mode == Mode::ClearRecents) {
+    removedRecentCount = RECENT_BOOKS.clear();
+    LOG_DBG("CLEAR_CACHE", "Cleared recents: %d removed", removedRecentCount);
+    clearedCount = 0;
+    failedCount = 0;
+    state = SUCCESS;
+    requestUpdate();
+    return;
+  }
+
   LOG_DBG("CLEAR_CACHE", "Clearing cache...");
 
   // Open .crosspoint directory
@@ -112,6 +168,8 @@ void ClearCacheActivity::clearCache() {
     }
   }
   root.close();
+
+  removedRecentCount = RECENT_BOOKS.pruneMissingBooks();
 
   LOG_DBG("CLEAR_CACHE", "Cache cleared: %d removed, %d failed", clearedCount, failedCount);
 

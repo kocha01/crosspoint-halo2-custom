@@ -53,6 +53,53 @@ void RecentBooksStore::updateBook(const std::string& path, const std::string& ti
   }
 }
 
+void RecentBooksStore::updateProgress(const std::string& path, uint8_t progressPercent) {
+  auto it =
+      std::find_if(recentBooks.begin(), recentBooks.end(), [&](const RecentBook& book) { return book.path == path; });
+  if (it != recentBooks.end() && it->progressPercent != progressPercent) {
+    it->progressPercent = progressPercent;
+    saveToFile();
+  }
+}
+
+int RecentBooksStore::pruneMissingBooks() {
+  const auto originalSize = recentBooks.size();
+  recentBooks.erase(std::remove_if(recentBooks.begin(), recentBooks.end(),
+                                   [](const RecentBook& book) { return !Storage.exists(book.path.c_str()); }),
+                    recentBooks.end());
+
+  const int removed = static_cast<int>(originalSize - recentBooks.size());
+  if (removed > 0) {
+    LOG_DBG("RBS", "Pruned %d missing recent book(s)", removed);
+    saveToFile();
+  }
+  return removed;
+}
+
+int RecentBooksStore::clear() {
+  const int removedCount = static_cast<int>(recentBooks.size());
+  if (removedCount == 0) {
+    return 0;
+  }
+  recentBooks.clear();
+  saveToFile();
+  LOG_DBG("RBS", "Cleared all recent books");
+  return removedCount;
+}
+
+bool RecentBooksStore::removeBook(const std::string& path) {
+  const auto it =
+      std::find_if(recentBooks.begin(), recentBooks.end(), [&](const RecentBook& book) { return book.path == path; });
+  if (it == recentBooks.end()) {
+    return false;
+  }
+
+  recentBooks.erase(it);
+  saveToFile();
+  LOG_DBG("RBS", "Removed recent book: %s", path.c_str());
+  return true;
+}
+
 bool RecentBooksStore::saveToFile() const {
   Storage.mkdir("/.crosspoint");
   return JsonSettingsIO::saveRecentBooks(*this, RECENT_BOOKS_FILE_JSON);
@@ -91,7 +138,11 @@ bool RecentBooksStore::loadFromFile() {
   if (Storage.exists(RECENT_BOOKS_FILE_JSON)) {
     String json = Storage.readFile(RECENT_BOOKS_FILE_JSON);
     if (!json.isEmpty()) {
-      return JsonSettingsIO::loadRecentBooks(*this, json.c_str());
+      if (JsonSettingsIO::loadRecentBooks(*this, json.c_str())) {
+        pruneMissingBooks();
+        return true;
+      }
+      return false;
     }
   }
 
@@ -101,6 +152,7 @@ bool RecentBooksStore::loadFromFile() {
       saveToFile();
       Storage.rename(RECENT_BOOKS_FILE_BIN, RECENT_BOOKS_FILE_BAK);
       LOG_DBG("RBS", "Migrated recent.bin to recent.json");
+      pruneMissingBooks();
       return true;
     }
   }

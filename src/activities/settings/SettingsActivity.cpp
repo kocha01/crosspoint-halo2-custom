@@ -186,6 +186,16 @@ void SettingsActivity::toggleCurrentSetting() {
       case SettingAction::ClearCache:
         startActivityForResult(std::make_unique<ClearCacheActivity>(renderer, mappedInput), resultHandler);
         break;
+      case SettingAction::RefreshRecentBooks:
+        startActivityForResult(
+            std::make_unique<ClearCacheActivity>(renderer, mappedInput, ClearCacheActivity::Mode::RefreshRecents),
+            resultHandler);
+        break;
+      case SettingAction::ClearRecentBooks:
+        startActivityForResult(
+            std::make_unique<ClearCacheActivity>(renderer, mappedInput, ClearCacheActivity::Mode::ClearRecents),
+            resultHandler);
+        break;
       case SettingAction::CheckForUpdates:
         startActivityForResult(std::make_unique<OtaUpdateActivity>(renderer, mappedInput), resultHandler);
         break;

@@ -6,8 +6,11 @@
 
 class ClearCacheActivity final : public Activity {
  public:
-  explicit ClearCacheActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
-      : Activity("ClearCache", renderer, mappedInput) {}
+  enum class Mode { ReadingCache, RefreshRecents, ClearRecents };
+
+  explicit ClearCacheActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
+                              const Mode mode = Mode::ReadingCache)
+      : Activity("ClearCache", renderer, mappedInput), mode(mode) {}
 
   void onEnter() override;
   void onExit() override;
@@ -18,11 +21,13 @@ class ClearCacheActivity final : public Activity {
  private:
   enum State { WARNING, CLEARING, SUCCESS, FAILED };
 
+  Mode mode = Mode::ReadingCache;
   State state = WARNING;
 
   void goBack() { finish(); }
 
   int clearedCount = 0;
   int failedCount = 0;
+  int removedRecentCount = 0;
   void clearCache();
 };

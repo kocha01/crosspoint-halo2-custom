@@ -1,0 +1,3 @@
+/Users/nakarinkochapond/Documents/XL project/crosspoint-reader-halo-2-ui-ver2/simulator/build-latest/CMakeFiles/crosspoint-simulator.dir
+/Users/nakarinkochapond/Documents/XL project/crosspoint-reader-halo-2-ui-ver2/simulator/build-latest/CMakeFiles/edit_cache.dir
+/Users/nakarinkochapond/Documents/XL project/crosspoint-reader-halo-2-ui-ver2/simulator/build-latest/CMakeFiles/rebuild_cache.dir
