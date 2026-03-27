@@ -450,8 +450,14 @@ const char* EpubReaderMenuActivity::getItemValue(MenuAction action) const {
         case CrossPointSettings::BOOKERLY:
           label = StrId::STR_BOOKERLY;
           break;
-        default:
-          label = StrId::STR_NOTO_SANS_THAI_LOOPED;
+        case CrossPointSettings::ITIM:
+          label = StrId::STR_ITIM;
+          break;
+        case CrossPointSettings::MALI:
+          label = StrId::STR_MALI;
+          break;
+        default:  // BAIJAMJUREE
+          label = StrId::STR_BAI_JAMJUREE;
           break;
       }
       return I18N.get(label);

@@ -36,15 +36,15 @@ FontDecompressor fontDecompressor;
 FontCacheManager fontCacheManager(renderer.getFontMap());
 
 // Fonts
-EpdFont smallFont(&notosansthailooped_8_regular);
+EpdFont smallFont(&baijamjuree_8_regular);
 EpdFontFamily smallFontFamily(&smallFont);
 
-EpdFont ui10RegularFont(&notosansthailooped_10_regular);
-EpdFont ui10BoldFont(&notosansthailooped_10_bold);
+EpdFont ui10RegularFont(&baijamjuree_10_regular);
+EpdFont ui10BoldFont(&baijamjuree_10_bold);
 EpdFontFamily ui10FontFamily(&ui10RegularFont, &ui10BoldFont);
 
-EpdFont ui12RegularFont(&notosansthailooped_12_regular);
-EpdFont ui12BoldFont(&notosansthailooped_12_bold);
+EpdFont ui12RegularFont(&baijamjuree_12_regular);
+EpdFont ui12BoldFont(&baijamjuree_12_bold);
 EpdFontFamily ui12FontFamily(&ui12RegularFont, &ui12BoldFont);
 
 EpdFont cjk8RegularFont(&notosanssc_8_regular);
@@ -59,23 +59,53 @@ EpdFont cjk12BoldFont(&notosanssc_12_bold);
 EpdFontFamily cjk12FontFamily(&cjk12RegularFont, &cjk12BoldFont);
 
 #ifndef OMIT_FONTS
-EpdFont notosans12RegularFont(&notosansthailooped_12_regular);
-EpdFont notosans12BoldFont(&notosansthailooped_12_bold);
-EpdFontFamily notosans12FontFamily(&notosans12RegularFont, &notosans12BoldFont);
-EpdFont notosans14RegularFont(&notosansthailooped_14_regular);
-EpdFont notosans14BoldFont(&notosansthailooped_14_bold);
-EpdFontFamily notosans14FontFamily(&notosans14RegularFont, &notosans14BoldFont);
-EpdFont notosans16RegularFont(&notosansthailooped_16_regular);
-EpdFont notosans16BoldFont(&notosansthailooped_16_bold);
-EpdFontFamily notosans16FontFamily(&notosans16RegularFont, &notosans16BoldFont);
-EpdFont notosans18RegularFont(&notosansthailooped_18_regular);
-EpdFont notosans18BoldFont(&notosansthailooped_18_bold);
-EpdFontFamily notosans18FontFamily(&notosans18RegularFont, &notosans18BoldFont);
-EpdFont notosans20RegularFont(&notosansthailooped_20_regular);
-EpdFont notosans20BoldFont(&notosansthailooped_20_bold);
-EpdFontFamily notosans20FontFamily(&notosans20RegularFont, &notosans20BoldFont);
-EpdFont notosans36BoldFont(&notosansthailooped_36_bold);
-EpdFontFamily notosans36FontFamily(&notosans36BoldFont);  // bold-only (UI number display)
+// Bai Jamjuree (Thai + Latin sans-serif — reader font + UI number display)
+EpdFont baijamjuree12RegularFont(&baijamjuree_12_regular);
+EpdFont baijamjuree12BoldFont(&baijamjuree_12_bold);
+EpdFontFamily baijamjuree12FontFamily(&baijamjuree12RegularFont, &baijamjuree12BoldFont);
+EpdFont baijamjuree14RegularFont(&baijamjuree_14_regular);
+EpdFont baijamjuree14BoldFont(&baijamjuree_14_bold);
+EpdFontFamily baijamjuree14FontFamily(&baijamjuree14RegularFont, &baijamjuree14BoldFont);
+EpdFont baijamjuree16RegularFont(&baijamjuree_16_regular);
+EpdFont baijamjuree16BoldFont(&baijamjuree_16_bold);
+EpdFontFamily baijamjuree16FontFamily(&baijamjuree16RegularFont, &baijamjuree16BoldFont);
+EpdFont baijamjuree18RegularFont(&baijamjuree_18_regular);
+EpdFont baijamjuree18BoldFont(&baijamjuree_18_bold);
+EpdFontFamily baijamjuree18FontFamily(&baijamjuree18RegularFont, &baijamjuree18BoldFont);
+EpdFont baijamjuree20RegularFont(&baijamjuree_20_regular);
+EpdFont baijamjuree20BoldFont(&baijamjuree_20_bold);
+EpdFontFamily baijamjuree20FontFamily(&baijamjuree20RegularFont, &baijamjuree20BoldFont);
+EpdFont baijamjuree36BoldFont(&baijamjuree_36_bold);
+EpdFontFamily baijamjuree36FontFamily(&baijamjuree36BoldFont);  // bold-only (UI number display)
+
+// Itim (Thai + Latin handwriting-style)
+EpdFont itim12RegularFont(&itim_12_regular);
+EpdFontFamily itim12FontFamily(&itim12RegularFont);
+EpdFont itim14RegularFont(&itim_14_regular);
+EpdFontFamily itim14FontFamily(&itim14RegularFont);
+EpdFont itim16RegularFont(&itim_16_regular);
+EpdFontFamily itim16FontFamily(&itim16RegularFont);
+EpdFont itim18RegularFont(&itim_18_regular);
+EpdFontFamily itim18FontFamily(&itim18RegularFont);
+EpdFont itim20RegularFont(&itim_20_regular);
+EpdFontFamily itim20FontFamily(&itim20RegularFont);
+
+// Mali (Thai + Latin casual)
+EpdFont mali12RegularFont(&mali_12_regular);
+EpdFont mali12BoldFont(&mali_12_bold);
+EpdFontFamily mali12FontFamily(&mali12RegularFont, &mali12BoldFont);
+EpdFont mali14RegularFont(&mali_14_regular);
+EpdFont mali14BoldFont(&mali_14_bold);
+EpdFontFamily mali14FontFamily(&mali14RegularFont, &mali14BoldFont);
+EpdFont mali16RegularFont(&mali_16_regular);
+EpdFont mali16BoldFont(&mali_16_bold);
+EpdFontFamily mali16FontFamily(&mali16RegularFont, &mali16BoldFont);
+EpdFont mali18RegularFont(&mali_18_regular);
+EpdFont mali18BoldFont(&mali_18_bold);
+EpdFontFamily mali18FontFamily(&mali18RegularFont, &mali18BoldFont);
+EpdFont mali20RegularFont(&mali_20_regular);
+EpdFont mali20BoldFont(&mali_20_bold);
+EpdFontFamily mali20FontFamily(&mali20RegularFont, &mali20BoldFont);
 
 EpdFont cloudloop12RegularFont(&cloudloop_12_regular);
 EpdFontFamily cloudloop12FontFamily(&cloudloop12RegularFont);
@@ -105,22 +135,22 @@ EpdFont bookerly20RegularFont(&bookerly_20_regular);
 EpdFont bookerly20BoldFont(&bookerly_20_bold);
 EpdFontFamily bookerly20FontFamily(&bookerly20RegularFont, &bookerly20BoldFont);
 
-// Literata (Thai serif — used as fallback for Bookerly when rendering Thai text)
-EpdFont literata12RegularFont(&literata_12_regular);
-EpdFont literata12BoldFont(&literata_12_bold);
-EpdFontFamily literata12FontFamily(&literata12RegularFont, &literata12BoldFont);
-EpdFont literata14RegularFont(&literata_14_regular);
-EpdFont literata14BoldFont(&literata_14_bold);
-EpdFontFamily literata14FontFamily(&literata14RegularFont, &literata14BoldFont);
-EpdFont literata16RegularFont(&literata_16_regular);
-EpdFont literata16BoldFont(&literata_16_bold);
-EpdFontFamily literata16FontFamily(&literata16RegularFont, &literata16BoldFont);
-EpdFont literata18RegularFont(&literata_18_regular);
-EpdFont literata18BoldFont(&literata_18_bold);
-EpdFontFamily literata18FontFamily(&literata18RegularFont, &literata18BoldFont);
-EpdFont literata20RegularFont(&literata_20_regular);
-EpdFont literata20BoldFont(&literata_20_bold);
-EpdFontFamily literata20FontFamily(&literata20RegularFont, &literata20BoldFont);
+// Noto Serif (serif + Thai — auto-selected when Bookerly + Thai book)
+EpdFont notoserif12RegularFont(&notoserif_12_regular);
+EpdFont notoserif12BoldFont(&notoserif_12_bold);
+EpdFontFamily notoserif12FontFamily(&notoserif12RegularFont, &notoserif12BoldFont);
+EpdFont notoserif14RegularFont(&notoserif_14_regular);
+EpdFont notoserif14BoldFont(&notoserif_14_bold);
+EpdFontFamily notoserif14FontFamily(&notoserif14RegularFont, &notoserif14BoldFont);
+EpdFont notoserif16RegularFont(&notoserif_16_regular);
+EpdFont notoserif16BoldFont(&notoserif_16_bold);
+EpdFontFamily notoserif16FontFamily(&notoserif16RegularFont, &notoserif16BoldFont);
+EpdFont notoserif18RegularFont(&notoserif_18_regular);
+EpdFont notoserif18BoldFont(&notoserif_18_bold);
+EpdFontFamily notoserif18FontFamily(&notoserif18RegularFont, &notoserif18BoldFont);
+EpdFont notoserif20RegularFont(&notoserif_20_regular);
+EpdFont notoserif20BoldFont(&notoserif_20_bold);
+EpdFontFamily notoserif20FontFamily(&notoserif20RegularFont, &notoserif20BoldFont);
 #endif  // OMIT_FONTS
 
 // measurement of power button press duration calibration value
@@ -207,28 +237,50 @@ void setupDisplayAndFonts() {
   fontCacheManager.setFontDecompressor(&fontDecompressor);
   renderer.setFontCacheManager(&fontCacheManager);
 #ifndef OMIT_FONTS
-  renderer.insertFont(NOTOSANS_12_FONT_ID, notosans12FontFamily);
-  renderer.insertFont(NOTOSANS_14_FONT_ID, notosans14FontFamily);
-  renderer.insertFont(NOTOSANS_16_FONT_ID, notosans16FontFamily);
-  renderer.insertFont(NOTOSANS_18_FONT_ID, notosans18FontFamily);
-  renderer.insertFont(NOTOSANS_20_FONT_ID, notosans20FontFamily);
-  renderer.insertFont(NOTOSANS_36_FONT_ID, notosans36FontFamily);
+  // Bai Jamjuree (reader + UI number display)
+  renderer.insertFont(BAIJAMJUREE_12_FONT_ID, baijamjuree12FontFamily);
+  renderer.insertFont(BAIJAMJUREE_14_FONT_ID, baijamjuree14FontFamily);
+  renderer.insertFont(BAIJAMJUREE_16_FONT_ID, baijamjuree16FontFamily);
+  renderer.insertFont(BAIJAMJUREE_18_FONT_ID, baijamjuree18FontFamily);
+  renderer.insertFont(BAIJAMJUREE_20_FONT_ID, baijamjuree20FontFamily);
+  renderer.insertFont(NOTOSANS_18_FONT_ID, baijamjuree18FontFamily);  // font-name display in reader menu
+  renderer.insertFont(NOTOSANS_36_FONT_ID, baijamjuree36FontFamily);  // font-size display in reader menu
+  // Itim
+  renderer.insertFont(ITIM_12_FONT_ID, itim12FontFamily);
+  renderer.insertFont(ITIM_14_FONT_ID, itim14FontFamily);
+  renderer.insertFont(ITIM_16_FONT_ID, itim16FontFamily);
+  renderer.insertFont(ITIM_18_FONT_ID, itim18FontFamily);
+  renderer.insertFont(ITIM_20_FONT_ID, itim20FontFamily);
+  // Mali
+  renderer.insertFont(MALI_12_FONT_ID, mali12FontFamily);
+  renderer.insertFont(MALI_14_FONT_ID, mali14FontFamily);
+  renderer.insertFont(MALI_16_FONT_ID, mali16FontFamily);
+  renderer.insertFont(MALI_18_FONT_ID, mali18FontFamily);
+  renderer.insertFont(MALI_20_FONT_ID, mali20FontFamily);
+  // CloudLoop
   renderer.insertFont(CLOUDLOOP_12_FONT_ID, cloudloop12FontFamily);
   renderer.insertFont(CLOUDLOOP_14_FONT_ID, cloudloop14FontFamily);
   renderer.insertFont(CLOUDLOOP_16_FONT_ID, cloudloop16FontFamily);
   renderer.insertFont(CLOUDLOOP_18_FONT_ID, cloudloop18FontFamily);
   renderer.insertFont(CLOUDLOOP_20_FONT_ID, cloudloop20FontFamily);
+  // Bookerly
   renderer.insertFont(BOOKERLY_12_FONT_ID, bookerly12FontFamily);
   renderer.insertFont(BOOKERLY_14_FONT_ID, bookerly14FontFamily);
   renderer.insertFont(BOOKERLY_16_FONT_ID, bookerly16FontFamily);
   renderer.insertFont(BOOKERLY_18_FONT_ID, bookerly18FontFamily);
   renderer.insertFont(BOOKERLY_20_FONT_ID, bookerly20FontFamily);
-  // Literata as fallback for Bookerly (provides Thai glyphs)
-  renderer.setFallbackFont(BOOKERLY_12_FONT_ID, &literata12FontFamily);
-  renderer.setFallbackFont(BOOKERLY_14_FONT_ID, &literata14FontFamily);
-  renderer.setFallbackFont(BOOKERLY_16_FONT_ID, &literata16FontFamily);
-  renderer.setFallbackFont(BOOKERLY_18_FONT_ID, &literata18FontFamily);
-  renderer.setFallbackFont(BOOKERLY_20_FONT_ID, &literata20FontFamily);
+  // Noto Serif (serif + Thai — auto-selected when Bookerly + Thai book)
+  renderer.insertFont(NOTOSERIF_12_FONT_ID, notoserif12FontFamily);
+  renderer.insertFont(NOTOSERIF_14_FONT_ID, notoserif14FontFamily);
+  renderer.insertFont(NOTOSERIF_16_FONT_ID, notoserif16FontFamily);
+  renderer.insertFont(NOTOSERIF_18_FONT_ID, notoserif18FontFamily);
+  renderer.insertFont(NOTOSERIF_20_FONT_ID, notoserif20FontFamily);
+  // Noto Serif as fallback for Bookerly (provides Thai glyphs for mixed-language text)
+  renderer.setFallbackFont(BOOKERLY_12_FONT_ID, &notoserif12FontFamily);
+  renderer.setFallbackFont(BOOKERLY_14_FONT_ID, &notoserif14FontFamily);
+  renderer.setFallbackFont(BOOKERLY_16_FONT_ID, &notoserif16FontFamily);
+  renderer.setFallbackFont(BOOKERLY_18_FONT_ID, &notoserif18FontFamily);
+  renderer.setFallbackFont(BOOKERLY_20_FONT_ID, &notoserif20FontFamily);
 #endif  // OMIT_FONTS
   renderer.insertFont(UI_10_FONT_ID, ui10FontFamily);
   renderer.insertFont(UI_12_FONT_ID, ui12FontFamily);

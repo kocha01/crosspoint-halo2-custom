@@ -65,7 +65,7 @@ void applyLegacyStatusBarSettings(CrossPointSettings& settings) {
 }
 
 uint8_t migrateLegacyFontFamily(const uint8_t legacyValue) {
-  return legacyValue == 3 ? CrossPointSettings::CLOUDLOOP : CrossPointSettings::NOTOSANS;
+  return legacyValue == 3 ? CrossPointSettings::CLOUDLOOP : CrossPointSettings::BAIJAMJUREE;
 }
 
 uint8_t migrateLegacyFontSize(const uint8_t legacyValue) {

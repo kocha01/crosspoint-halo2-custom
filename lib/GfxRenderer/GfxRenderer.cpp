@@ -88,18 +88,29 @@ static inline int getCombiningAnchorYRotated(const int32_t cursorYFP, const int 
   return lastBaseY - fp4::toPixel(lastBaseAdvanceFP / 2);
 }
 
+/// Check whether the font's Unicode intervals include the Thai block (U+0E00–U+0E7F).
+static inline bool fontHasThaiIntervals(const EpdFontData* fontData) {
+  for (uint32_t i = 0; i < fontData->intervalCount; i++) {
+    if (fontData->intervals[i].first <= 0x0E7F && fontData->intervals[i].last >= 0x0E00) {
+      return true;
+    }
+  }
+  return false;
+}
+
 static inline bool fontNeedsThaiUpperRestacking(const EpdFontData* fontData) {
   if (!fontData) {
     return false;
   }
-
-  // Limit the heuristic to the Noto Sans Thai Looped family generated for this firmware.
-  // CloudLoop already places third-level marks acceptably and should not be raised further.
-  return fontData->intervalCount >= 48 && fontData->groupCount >= 10 && fontData->ligaturePairCount == 0;
+  // Apply Thai upper-mark restacking to any font that contains Thai glyphs.
+  // The restacking logic only raises level-3 marks (tone marks) when they
+  // actually overlap a previously placed level-2 mark — fonts that already
+  // position marks correctly (e.g. CloudLoop) are unaffected.
+  return fontHasThaiIntervals(fontData);
 }
 
 static inline void applyThaiUpperStacking(const EpdFontData* fontData, const uint32_t cp, const EpdGlyph* glyph,
-                                          const int penY, int* raiseBy, int* stackedUpperMinY,
+                                          const int penY, int* raiseBy, int* stackedUpperMaxY,
                                           bool* hasStackedUpper) {
   if (!fontNeedsThaiUpperRestacking(fontData)) {
     return;
@@ -109,22 +120,26 @@ static inline void applyThaiUpperStacking(const EpdFontData* fontData, const uin
     return;
   }
 
+  // Y-up coordinate system: higher values = higher on screen (above baseline).
+  // glyphMaxY = top edge of the glyph, glyphMinY = bottom edge.
   int glyphMinY = penY - *raiseBy + glyph->top - glyph->height;
   int glyphMaxY = penY - *raiseBy + glyph->top;
 
   if (utf8IsThaiUpperLevelThreeMark(cp) && *hasStackedUpper) {
+    // Level-3 mark (tone mark) must sit above the top edge of the level-2 mark
+    // with at least MIN_STACK_GAP_PX pixels of clearance.
     constexpr int MIN_STACK_GAP_PX = 1;
-    const int desiredMaxY = *stackedUpperMinY - MIN_STACK_GAP_PX;
-    if (glyphMaxY > desiredMaxY) {
-      const int extraRaise = glyphMaxY - desiredMaxY;
+    const int desiredMinY = *stackedUpperMaxY + MIN_STACK_GAP_PX;
+    if (glyphMinY < desiredMinY) {
+      const int extraRaise = desiredMinY - glyphMinY;
       *raiseBy += extraRaise;
-      glyphMinY -= extraRaise;
-      glyphMaxY -= extraRaise;
+      glyphMinY += extraRaise;
+      glyphMaxY += extraRaise;
     }
   }
 
   if (utf8IsThaiUpperLevelTwoMark(cp) || utf8IsThaiUpperLevelThreeMark(cp)) {
-    *stackedUpperMinY = *hasStackedUpper ? std::min(*stackedUpperMinY, glyphMinY) : glyphMinY;
+    *stackedUpperMaxY = *hasStackedUpper ? std::max(*stackedUpperMaxY, glyphMaxY) : glyphMaxY;
     *hasStackedUpper = true;
   }
 }
@@ -361,7 +376,7 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
 
   const EpdFontFamily* fallbackFont = resolveFallbackFont(*this, fontId, font);
   constexpr int MIN_COMBINING_GAP_PX = 1;
-  int stackedThaiUpperMinY = 0;
+  int stackedThaiUpperMaxY = 0;
   bool hasStackedThaiUpper = false;
 
   uint32_t cp;
@@ -378,15 +393,20 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
       }
       int raiseBy = 0;
       if (combiningGlyph) {
-        // Only enforce a minimum gap for upper marks. Thai lower vowels such as
-        // U+0E38/U+0E39 are designed to sit below the base glyph and must not be raised.
-        if (!utf8IsThaiLowerCombiningMark(cp)) {
+        // Gap enforcement rules:
+        // - Lower Thai marks (U+0E38-0E3A): never raise — designed to sit below.
+        // - Level-2 upper Thai marks (ั ิ ี ึ ื ็ ํ): designed to sit between
+        //   consonant strokes (e.g. ั between the loops of ป). Intentional overlap
+        //   with the consonant top — skip enforcement, trust the font metrics.
+        // - All other marks (level-3 tone marks ่ ้ ๊ ๋, and non-Thai): enforce
+        //   a minimum 1px gap above the consonant/stack top.
+        if (!utf8IsThaiLowerCombiningMark(cp) && !utf8IsThaiUpperLevelTwoMark(cp)) {
           const int currentGap = combiningGlyph->top - combiningGlyph->height - lastBaseTop;
           if (currentGap < MIN_COMBINING_GAP_PX) {
             raiseBy = MIN_COMBINING_GAP_PX - currentGap;
           }
         }
-        applyThaiUpperStacking(combiningFontData, cp, combiningGlyph, yPos, &raiseBy, &stackedThaiUpperMinY,
+        applyThaiUpperStacking(combiningFontData, cp, combiningGlyph, yPos, &raiseBy, &stackedThaiUpperMaxY,
                                &hasStackedThaiUpper);
       }
 

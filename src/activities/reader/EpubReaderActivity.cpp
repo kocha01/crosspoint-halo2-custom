@@ -44,6 +44,10 @@ int clampPercent(int percent) {
 
 }  // namespace
 
+int EpubReaderActivity::getEffectiveFontId() const {
+  return SETTINGS.getReaderFontIdForThaiContent(epub->getLanguage(), epub->getTitle());
+}
+
 void EpubReaderActivity::onEnter() {
   Activity::onEnter();
 
@@ -571,7 +575,7 @@ void EpubReaderActivity::render(RenderLock&& lock) {
     const uint16_t viewportHeight = renderer.getScreenHeight() - orientedMarginTop - orientedMarginBottom;
 
     const bool forceBold = SETTINGS.readerBoldText != 0;
-    if (!section->loadSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
+    if (!section->loadSectionFile(getEffectiveFontId(), SETTINGS.getReaderLineCompression(),
                                   SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment, viewportWidth,
                                   viewportHeight, SETTINGS.hyphenationEnabled, SETTINGS.embeddedStyle,
                                   SETTINGS.imageRendering, forceBold)) {
@@ -579,7 +583,7 @@ void EpubReaderActivity::render(RenderLock&& lock) {
 
       const auto popupFn = [this]() { GUI.drawPopup(renderer, tr(STR_INDEXING)); };
 
-      if (!section->createSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
+      if (!section->createSectionFile(getEffectiveFontId(), SETTINGS.getReaderLineCompression(),
                                       SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment, viewportWidth,
                                       viewportHeight, SETTINGS.hyphenationEnabled, SETTINGS.embeddedStyle,
                                       SETTINGS.imageRendering, forceBold, popupFn)) {
@@ -711,7 +715,7 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
   // Font prewarm: scan pass accumulates text, then prewarm, then real render
   const uint32_t heapBefore = esp_get_free_heap_size();
   auto scope = fcm->createPrewarmScope();
-  page->render(renderer, SETTINGS.getReaderFontId(), orientedMarginLeft, orientedMarginTop);  // scan pass
+  page->render(renderer, getEffectiveFontId(), orientedMarginLeft, orientedMarginTop);  // scan pass
   scope.endScanAndPrewarm();
   const uint32_t heapAfter = esp_get_free_heap_size();
   fcm->logStats("prewarm");
@@ -723,7 +727,7 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
   // Force special handling for pages with images when anti-aliasing is on
   bool imagePageWithAA = page->hasImages() && SETTINGS.textAntiAliasing;
 
-  page->render(renderer, SETTINGS.getReaderFontId(), orientedMarginLeft, orientedMarginTop);
+  page->render(renderer, getEffectiveFontId(), orientedMarginLeft, orientedMarginTop);
   renderStatusBar();
 
   // Dark mode: invert framebuffer (white text on black background)
@@ -746,7 +750,7 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
       renderer.displayBuffer(HalDisplay::FAST_REFRESH);
 
       // Re-render page content to restore images into the blanked area
-      page->render(renderer, SETTINGS.getReaderFontId(), orientedMarginLeft, orientedMarginTop);
+      page->render(renderer, getEffectiveFontId(), orientedMarginLeft, orientedMarginTop);
       renderStatusBar();
       if (SETTINGS.readerDarkMode) {
         renderer.invertScreen();
@@ -772,7 +776,7 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
 
     renderer.clearScreen(grayClear);
     renderer.setRenderMode(GfxRenderer::GRAYSCALE_LSB);
-    page->render(renderer, SETTINGS.getReaderFontId(), orientedMarginLeft, orientedMarginTop);
+    page->render(renderer, getEffectiveFontId(), orientedMarginLeft, orientedMarginTop);
     if (SETTINGS.readerDarkMode) {
       renderer.invertScreen();
     }
@@ -782,7 +786,7 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
     // Render and copy to MSB buffer
     renderer.clearScreen(grayClear);
     renderer.setRenderMode(GfxRenderer::GRAYSCALE_MSB);
-    page->render(renderer, SETTINGS.getReaderFontId(), orientedMarginLeft, orientedMarginTop);
+    page->render(renderer, getEffectiveFontId(), orientedMarginLeft, orientedMarginTop);
     if (SETTINGS.readerDarkMode) {
       renderer.invertScreen();
     }

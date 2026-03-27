@@ -30,7 +30,7 @@ constexpr uint8_t LEGACY_FONT_FAMILY_COUNT = 4;
 constexpr uint8_t LEGACY_FONT_SIZE_COUNT = 4;
 
 uint8_t migrateLegacyFontFamily(const uint8_t legacyValue) {
-  return legacyValue == 3 ? CrossPointSettings::CLOUDLOOP : CrossPointSettings::NOTOSANS;
+  return legacyValue == 3 ? CrossPointSettings::CLOUDLOOP : CrossPointSettings::BAIJAMJUREE;
 }
 
 uint8_t migrateLegacyFontSize(const uint8_t legacyValue) {
@@ -269,7 +269,9 @@ bool CrossPointSettings::loadFromBinaryFile() {
 
 float CrossPointSettings::getReaderLineCompression() const {
   switch (fontFamily) {
-    case NOTOSANS:
+    case BAIJAMJUREE:
+    case ITIM:
+    case MALI:
     default:
       switch (lineSpacing) {
         case TIGHT:
@@ -327,50 +329,93 @@ int CrossPointSettings::getRefreshFrequency() const {
 
 int CrossPointSettings::getReaderFontId() const {
   switch (fontFamily) {
-    case NOTOSANS:
-    default: {
-      const uint8_t normalizedSize = normalizeFontSize(fontSize);
-      switch (normalizedSize) {
-        case FONT_12:
-          return NOTOSANS_12_FONT_ID;
-        case FONT_14:
-          return NOTOSANS_14_FONT_ID;
-        case FONT_16:
-          return NOTOSANS_16_FONT_ID;
-        case FONT_18:
-          return NOTOSANS_18_FONT_ID;
-        case FONT_20:
-        default:
-          return NOTOSANS_20_FONT_ID;
+    case BAIJAMJUREE:
+    default:
+      switch (normalizeFontSize(fontSize)) {
+        case FONT_12: return BAIJAMJUREE_12_FONT_ID;
+        case FONT_14: return BAIJAMJUREE_14_FONT_ID;
+        case FONT_16: return BAIJAMJUREE_16_FONT_ID;
+        case FONT_18: return BAIJAMJUREE_18_FONT_ID;
+        case FONT_20: default: return BAIJAMJUREE_20_FONT_ID;
       }
-    }
     case CLOUDLOOP:
       switch (normalizeFontSize(fontSize)) {
-        case FONT_12:
-          return CLOUDLOOP_12_FONT_ID;
-        case FONT_14:
-          return CLOUDLOOP_14_FONT_ID;
-        case FONT_16:
-          return CLOUDLOOP_16_FONT_ID;
-        case FONT_18:
-          return CLOUDLOOP_18_FONT_ID;
-        case FONT_20:
-        default:
-          return CLOUDLOOP_20_FONT_ID;
+        case FONT_12: return CLOUDLOOP_12_FONT_ID;
+        case FONT_14: return CLOUDLOOP_14_FONT_ID;
+        case FONT_16: return CLOUDLOOP_16_FONT_ID;
+        case FONT_18: return CLOUDLOOP_18_FONT_ID;
+        case FONT_20: default: return CLOUDLOOP_20_FONT_ID;
       }
     case BOOKERLY:
       switch (normalizeFontSize(fontSize)) {
-        case FONT_12:
-          return BOOKERLY_12_FONT_ID;
-        case FONT_14:
-          return BOOKERLY_14_FONT_ID;
-        case FONT_16:
-          return BOOKERLY_16_FONT_ID;
-        case FONT_18:
-          return BOOKERLY_18_FONT_ID;
-        case FONT_20:
-        default:
-          return BOOKERLY_20_FONT_ID;
+        case FONT_12: return BOOKERLY_12_FONT_ID;
+        case FONT_14: return BOOKERLY_14_FONT_ID;
+        case FONT_16: return BOOKERLY_16_FONT_ID;
+        case FONT_18: return BOOKERLY_18_FONT_ID;
+        case FONT_20: default: return BOOKERLY_20_FONT_ID;
+      }
+    case ITIM:
+      switch (normalizeFontSize(fontSize)) {
+        case FONT_12: return ITIM_12_FONT_ID;
+        case FONT_14: return ITIM_14_FONT_ID;
+        case FONT_16: return ITIM_16_FONT_ID;
+        case FONT_18: return ITIM_18_FONT_ID;
+        case FONT_20: default: return ITIM_20_FONT_ID;
+      }
+    case MALI:
+      switch (normalizeFontSize(fontSize)) {
+        case FONT_12: return MALI_12_FONT_ID;
+        case FONT_14: return MALI_14_FONT_ID;
+        case FONT_16: return MALI_16_FONT_ID;
+        case FONT_18: return MALI_18_FONT_ID;
+        case FONT_20: default: return MALI_20_FONT_ID;
       }
   }
+}
+
+static bool isThaiLanguage(const std::string& language) {
+  if (language.empty()) return false;
+  // Match "th", "tha", "th-TH", "th-*" etc.
+  return language == "th" || language == "tha" || (language.size() >= 3 && language[0] == 't' && language[1] == 'h' && language[2] == '-');
+}
+
+static bool containsThaiChars(const std::string& text) {
+  // Scan for Thai Unicode codepoints (U+0E01-U+0E3A, U+0E40-U+0E4E)
+  const auto* p = reinterpret_cast<const uint8_t*>(text.c_str());
+  while (*p) {
+    if (p[0] == 0xE0 && p[1] >= 0xB8 && p[1] <= 0xB9) {
+      return true;  // Thai block: U+0E00-U+0E7F = UTF-8 0xE0 0xB8/0xB9 xx
+    }
+    // Skip UTF-8 multibyte sequences
+    if (*p < 0x80) p += 1;
+    else if (*p < 0xE0) p += 2;
+    else if (*p < 0xF0) p += 3;
+    else p += 4;
+  }
+  return false;
+}
+
+int CrossPointSettings::getThaiFallbackFontId() const {
+  // Use Noto Serif (serif Latin + Thai via NotoSansThaiLooped font stack)
+  switch (normalizeFontSize(fontSize)) {
+    case FONT_12: return NOTOSERIF_12_FONT_ID;
+    case FONT_14: return NOTOSERIF_14_FONT_ID;
+    case FONT_16: return NOTOSERIF_16_FONT_ID;
+    case FONT_18: return NOTOSERIF_18_FONT_ID;
+    case FONT_20: default: return NOTOSERIF_20_FONT_ID;
+  }
+}
+
+int CrossPointSettings::getReaderFontIdForLanguage(const std::string& language) const {
+  if (fontFamily != BOOKERLY) return getReaderFontId();
+  if (isThaiLanguage(language)) return getThaiFallbackFontId();
+  return getReaderFontId();
+}
+
+int CrossPointSettings::getReaderFontIdForThaiContent(const std::string& language, const std::string& title) const {
+  // Bai Jamjuree, Itim, Mali, and CloudLoop all have native Thai glyphs — no fallback needed.
+  if (fontFamily != BOOKERLY) return getReaderFontId();
+  // Bookerly lacks Thai glyphs; auto-switch to Noto Serif (Thai font stack).
+  if (isThaiLanguage(language) || containsThaiChars(title)) return getThaiFallbackFontId();
+  return getReaderFontId();
 }

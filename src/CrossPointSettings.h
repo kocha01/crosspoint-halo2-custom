@@ -93,7 +93,7 @@ class CrossPointSettings {
   enum SIDE_BUTTON_LAYOUT { PREV_NEXT = 0, NEXT_PREV = 1, SIDE_BUTTON_LAYOUT_COUNT };
 
   // Font family options
-  enum FONT_FAMILY { NOTOSANS = 0, CLOUDLOOP = 1, BOOKERLY = 2, FONT_FAMILY_COUNT };
+  enum FONT_FAMILY { BAIJAMJUREE = 0, CLOUDLOOP = 1, BOOKERLY = 2, ITIM = 3, MALI = 4, FONT_FAMILY_COUNT };
   // Reader font sizes are stored as actual point values.
   enum FONT_SIZE : uint8_t { FONT_12 = 12, FONT_14 = 14, FONT_16 = 16, FONT_18 = 18, FONT_20 = 20 };
   static constexpr uint8_t FONT_SIZE_MIN = FONT_12;
@@ -174,7 +174,7 @@ class CrossPointSettings {
   uint8_t frontButtonLeft = FRONT_HW_LEFT;
   uint8_t frontButtonRight = FRONT_HW_RIGHT;
   // Reader font settings
-  uint8_t fontFamily = NOTOSANS;
+  uint8_t fontFamily = BAIJAMJUREE;
   uint8_t fontSize = FONT_14;
   uint8_t lineSpacing = NORMAL;
   uint8_t paragraphAlignment = JUSTIFIED;
@@ -222,6 +222,17 @@ class CrossPointSettings {
     return (shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::SLEEP) ? 10 : 400;
   }
   int getReaderFontId() const;
+
+  /// Returns the Thai-capable fallback font ID (NotoSans) for the current font size
+  int getThaiFallbackFontId() const;
+
+  /// Returns the effective reader font ID, auto-switching Bookerly → Literata
+  /// when the book's language is Thai (since Bookerly lacks Thai glyphs).
+  int getReaderFontIdForLanguage(const std::string& language) const;
+
+  /// Like getReaderFontIdForLanguage but also detects Thai from the book title
+  /// (handles EPUBs with incorrect/missing language tags).
+  int getReaderFontIdForThaiContent(const std::string& language, const std::string& title) const;
 
   // If count_only is true, returns the number of settings items that would be written.
   uint8_t writeSettings(FsFile& file, bool count_only = false) const;

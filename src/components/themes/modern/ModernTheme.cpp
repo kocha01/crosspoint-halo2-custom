@@ -32,7 +32,7 @@
 namespace {
 constexpr int batteryPercentSpacing = 4;
 constexpr int hPaddingInSelection = 8;
-constexpr int cornerRadius = 10;
+constexpr int cornerRadius = 6;
 constexpr int topHintButtonY = 345;
 constexpr int popupMarginX = 20;
 constexpr int popupMarginY = 14;
