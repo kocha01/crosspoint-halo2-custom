@@ -222,6 +222,7 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
       .skip_cert_common_name_check = true,
       .crt_bundle_attach = esp_crt_bundle_attach,
       .keep_alive_enable = true,
+      .max_redirection_count = 5,
   };
 
   esp_https_ota_config_t ota_config = {
