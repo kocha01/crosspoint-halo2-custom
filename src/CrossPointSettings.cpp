@@ -270,17 +270,15 @@ bool CrossPointSettings::loadFromBinaryFile() {
 float CrossPointSettings::getReaderLineCompression() const {
   switch (fontFamily) {
     case BAIJAMJUREE:
-    case ITIM:
-    case MALI:
     default:
       switch (lineSpacing) {
         case TIGHT:
-          return 0.90f;
+          return 1.20f;
         case NORMAL:
         default:
-          return 0.95f;
+          return 1.40f;
         case WIDE:
-          return 1.0f;
+          return 1.60f;
       }
     case CLOUDLOOP:
       switch (lineSpacing) {
@@ -354,22 +352,6 @@ int CrossPointSettings::getReaderFontId() const {
         case FONT_18: return BOOKERLY_18_FONT_ID;
         case FONT_20: default: return BOOKERLY_20_FONT_ID;
       }
-    case ITIM:
-      switch (normalizeFontSize(fontSize)) {
-        case FONT_12: return ITIM_12_FONT_ID;
-        case FONT_14: return ITIM_14_FONT_ID;
-        case FONT_16: return ITIM_16_FONT_ID;
-        case FONT_18: return ITIM_18_FONT_ID;
-        case FONT_20: default: return ITIM_20_FONT_ID;
-      }
-    case MALI:
-      switch (normalizeFontSize(fontSize)) {
-        case FONT_12: return MALI_12_FONT_ID;
-        case FONT_14: return MALI_14_FONT_ID;
-        case FONT_16: return MALI_16_FONT_ID;
-        case FONT_18: return MALI_18_FONT_ID;
-        case FONT_20: default: return MALI_20_FONT_ID;
-      }
   }
 }
 
@@ -413,7 +395,7 @@ int CrossPointSettings::getReaderFontIdForLanguage(const std::string& language) 
 }
 
 int CrossPointSettings::getReaderFontIdForThaiContent(const std::string& language, const std::string& title) const {
-  // Bai Jamjuree, Itim, Mali, and CloudLoop all have native Thai glyphs — no fallback needed.
+  // Bai Jamjuree and CloudLoop all have native Thai glyphs — no fallback needed.
   if (fontFamily != BOOKERLY) return getReaderFontId();
   // Bookerly lacks Thai glyphs; auto-switch to Noto Serif (Thai font stack).
   if (isThaiLanguage(language) || containsThaiChars(title)) return getThaiFallbackFontId();

@@ -51,6 +51,8 @@ class GfxRenderer {
   const EpdFontFamily* fallbackFont_ = nullptr;
   // Per-font fallback overrides keyed by primary font ID.
   std::map<int, const EpdFontFamily*> fallbackFontMap_;
+  // Secondary per-font fallback (tried after primary fallback fails).
+  std::map<int, const EpdFontFamily*> fallbackFontMap2_;
 
 #ifdef CROSSPOINT_EMULATED
   mutable bool debugTextBoundsActive_ = false;
@@ -94,10 +96,21 @@ class GfxRenderer {
       fallbackFontMap_.erase(fontId);
     }
   }
+  void setSecondaryFallbackFont(int fontId, const EpdFontFamily* font) {
+    if (font) {
+      fallbackFontMap2_[fontId] = font;
+    } else {
+      fallbackFontMap2_.erase(fontId);
+    }
+  }
   const EpdFontFamily* getFallbackFont() const { return fallbackFont_; }
   const EpdFontFamily* getFallbackFont(int fontId) const {
     const auto it = fallbackFontMap_.find(fontId);
     return it != fallbackFontMap_.end() ? it->second : fallbackFont_;
+  }
+  const EpdFontFamily* getSecondaryFallbackFont(int fontId) const {
+    const auto it = fallbackFontMap2_.find(fontId);
+    return it != fallbackFontMap2_.end() ? it->second : nullptr;
   }
 
   // Orientation control (affects logical width/height and coordinate transforms)

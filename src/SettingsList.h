@@ -40,7 +40,7 @@ inline const std::vector<SettingInfo>& getSettingsList() {
 
       // --- Reader ---
       SettingInfo::Enum(StrId::STR_FONT_FAMILY, &CrossPointSettings::fontFamily,
-                        {StrId::STR_NOTO_SANS_THAI_LOOPED, StrId::STR_CLOUD_LOOP},
+                        {StrId::STR_BAI_JAMJUREE, StrId::STR_CLOUD_LOOP, StrId::STR_BOOKERLY},
                         "fontFamily", StrId::STR_CAT_READER),
       SettingInfo::Value(StrId::STR_FONT_SIZE, &CrossPointSettings::fontSize,
                          {CrossPointSettings::FONT_SIZE_MIN, CrossPointSettings::FONT_SIZE_MAX,
@@ -66,19 +66,13 @@ inline const std::vector<SettingInfo>& getSettingsList() {
       SettingInfo::Enum(StrId::STR_IMAGES, &CrossPointSettings::imageRendering,
                         {StrId::STR_IMAGES_DISPLAY, StrId::STR_IMAGES_PLACEHOLDER, StrId::STR_IMAGES_SUPPRESS},
                         "imageRendering", StrId::STR_CAT_READER),
-      SettingInfo::Toggle(StrId::STR_COLOR_MODE, &CrossPointSettings::readerDarkMode, "readerDarkMode",
-                          StrId::STR_CAT_READER),
-      SettingInfo::Toggle(StrId::STR_COLOR_MODE, &CrossPointSettings::menuTexture, "menuTexture",
-                          StrId::STR_CAT_READER),
-      SettingInfo::Toggle(StrId::STR_COLOR_MODE, &CrossPointSettings::readerBoldText, "readerBoldText",
-                          StrId::STR_CAT_READER),
       // --- Controls ---
       SettingInfo::Enum(StrId::STR_SIDE_BTN_LAYOUT, &CrossPointSettings::sideButtonLayout,
                         {StrId::STR_PREV_NEXT, StrId::STR_NEXT_PREV}, "sideButtonLayout", StrId::STR_CAT_CONTROLS),
       SettingInfo::Toggle(StrId::STR_LONG_PRESS_SKIP, &CrossPointSettings::longPressChapterSkip, "longPressChapterSkip",
                           StrId::STR_CAT_CONTROLS),
       SettingInfo::Enum(StrId::STR_SHORT_PWR_BTN, &CrossPointSettings::shortPwrBtn,
-                        {StrId::STR_IGNORE, StrId::STR_SLEEP, StrId::STR_PAGE_TURN}, "shortPwrBtn",
+                        {StrId::STR_IGNORE, StrId::STR_PAGE_TURN}, "shortPwrBtn",
                         StrId::STR_CAT_CONTROLS),
 
       // --- System ---

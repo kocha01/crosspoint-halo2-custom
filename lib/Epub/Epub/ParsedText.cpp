@@ -551,6 +551,9 @@ void ParsedText::extractLine(const size_t breakIndex, const int pageWidth, const
       totalNaturalGaps += gap;
       if (countsAsVisibleGap(words[globalIdx - 1], words[globalIdx], continuesVec[globalIdx])) {
         actualGapCount++;
+      } else if (isZeroWidthBreakToken(words[globalIdx])) {
+        // Thai word boundary: ZWS marker counts as one justify gap
+        actualGapCount++;
       }
     }
   }
@@ -594,8 +597,12 @@ void ParsedText::extractLine(const size_t breakIndex, const int pageWidth, const
         gap = boundaryAdvance(renderer, fontId, words[lastBreakAt + wordIdx], words[lastBreakAt + wordIdx + 1],
                               wordStyles[lastBreakAt + wordIdx], false);
       }
-      if (gap > 0 && blockStyle.alignment == CssTextAlign::Justify && !isLastLine) {
-        gap += justifyExtra;
+      if (blockStyle.alignment == CssTextAlign::Justify && !isLastLine) {
+        if (gap > 0) {
+          gap += justifyExtra;  // Latin/space gap: add to natural space
+        } else if (isZeroWidthBreakToken(words[lastBreakAt + wordIdx])) {
+          gap = justifyExtra;  // Thai word boundary: inject extra after ZWS pivot
+        }
       }
       xpos += wordWidths[lastBreakAt + wordIdx] + gap;
     }

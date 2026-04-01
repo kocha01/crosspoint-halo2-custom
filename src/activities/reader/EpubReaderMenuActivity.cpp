@@ -61,6 +61,7 @@ std::vector<EpubReaderMenuActivity::MenuItem> EpubReaderMenuActivity::buildFullM
   items.reserve(14);
   items.push_back({MenuAction::LINE_SPACING, StrId::STR_LINE_SPACING});
   items.push_back({MenuAction::SCREEN_MARGIN, StrId::STR_SCREEN_MARGIN});
+  items.push_back({MenuAction::ROTATE_SCREEN, StrId::STR_ORIENTATION});
   items.push_back({MenuAction::AUTO_PAGE_TURN, StrId::STR_AUTO_TURN_PAGES_PER_MIN});
   items.push_back({MenuAction::SELECT_CHAPTER, StrId::STR_SELECT_CHAPTER});
   items.push_back({MenuAction::GO_TO_PERCENT, StrId::STR_GO_TO_PERCENT});
@@ -337,14 +338,23 @@ void EpubReaderMenuActivity::renderQuickSettings(int x, int /*y*/, int w, int /*
   snprintf(sizeBuf, sizeof(sizeBuf), "%d", pendingFontSize);
   const int sizeH = renderer.getTextHeight(NOTOSANS_36_FONT_ID);
   const int sizeY = 406 - sizeH / 2;
-  renderer.drawText(NOTOSANS_36_FONT_ID,
-                    x + (w - renderer.getTextWidth(NOTOSANS_36_FONT_ID, sizeBuf, EpdFontFamily::BOLD)) / 2,
-                    sizeY, sizeBuf, true, EpdFontFamily::BOLD);
+  {
+    const int textW = renderer.getTextWidth(NOTOSANS_36_FONT_ID, sizeBuf, EpdFontFamily::REGULAR);
+    const int cx = x + (w - textW) / 2;
+    // Stroke effect: draw at 8 neighbours first (outline), then solid on top
+    for (int dx = -1; dx <= 1; ++dx) {
+      for (int dy = -1; dy <= 1; ++dy) {
+        if (dx == 0 && dy == 0) continue;
+        renderer.drawText(NOTOSANS_36_FONT_ID, cx + dx, sizeY + dy, sizeBuf, true, EpdFontFamily::REGULAR);
+      }
+    }
+    renderer.drawText(NOTOSANS_36_FONT_ID, cx, sizeY, sizeBuf, true, EpdFontFamily::REGULAR);
+  }
 
   // ▲ Up triangle (gray, black when pressed)
   constexpr int triW = 20, triH = 12;
   const int triCx = x + w / 2;
-  const int upTriY = sizeY - triH + 4;  // +10px lower
+  const int upTriY = sizeY - triH - 16;  // 20px higher than before
   const bool upActive = (activeArrow == 1);
   for (int row = 0; row < triH; ++row) {
     const int halfSpan = (row * triW) / (2 * (triH - 1));
@@ -449,12 +459,6 @@ const char* EpubReaderMenuActivity::getItemValue(MenuAction action) const {
           break;
         case CrossPointSettings::BOOKERLY:
           label = StrId::STR_BOOKERLY;
-          break;
-        case CrossPointSettings::ITIM:
-          label = StrId::STR_ITIM;
-          break;
-        case CrossPointSettings::MALI:
-          label = StrId::STR_MALI;
           break;
         default:  // BAIJAMJUREE
           label = StrId::STR_BAI_JAMJUREE;

@@ -37,6 +37,8 @@ class ChapterHtmlSlimParser {
   char partWordBuffer[MAX_WORD_SIZE + 1] = {};
   int partWordBufferIndex = 0;
   bool nextWordContinues = false;  // true when next flushed word attaches to previous (inline element boundary)
+  bool spaceBeforeZWS = false;    // true when a U+0020 space was seen since the last non-space character;
+                                  // used to suppress a trailing ZWS that is redundant after a real space.
   std::unique_ptr<ParsedText> currentTextBlock = nullptr;
   std::unique_ptr<Page> currentPage = nullptr;
   int16_t currentPageNextY = 0;

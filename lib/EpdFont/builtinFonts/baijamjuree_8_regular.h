@@ -3,7 +3,7 @@
  * name: baijamjuree_8_regular
  * size: 8
  * mode: 2-bit  compressed: true
- * Command used: ../scripts/fontconvert.py baijamjuree_8_regular 8 /Users/nakarinkochapond/Downloads/Books/Books/Bai_Jamjuree,Itim,Mali/Bai_Jamjuree/BaiJamjuree-Regular.ttf --additional-intervals 0x0E00,0x0E7F --2bit --compress
+ * Command used: fontconvert.py baijamjuree_8_regular 8 /Users/nakarinkochapond/Downloads/Books/Books/Bai_Jamjuree,Itim,Mali/Bai_Jamjuree/BaiJamjuree-Regular.ttf --additional-intervals 0x0E00,0x0E7F --2bit --compress
  */
 #pragma once
 #include "EpdFontData.h"
@@ -2024,7 +2024,7 @@ static const EpdFontData baijamjuree_8_regular = {
     baijamjuree_8_regularGlyphs,
     baijamjuree_8_regularIntervals,
     57,
-    21,
+    26,
     17,
     -5,
     true,

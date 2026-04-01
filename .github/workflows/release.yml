@@ -38,3 +38,12 @@ jobs:
             .pio/build/gh_release/firmware.elf
             .pio/build/gh_release/firmware.map
             .pio/build/gh_release/partitions.bin
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: .pio/build/gh_release/firmware.bin
+          name: ${{ github.ref_name }}
+          body: CrossPoint Halo 2 Custom Firmware ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

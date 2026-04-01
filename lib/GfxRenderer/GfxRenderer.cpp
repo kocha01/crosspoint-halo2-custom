@@ -157,17 +157,22 @@ static inline const EpdFontFamily* resolveFallbackFont(const GfxRenderer& render
 // Coordinate mapping and cursor advance direction are selected at compile time via the template parameter.
 template <TextRotation rotation>
 static void renderCharImpl(const GfxRenderer& renderer, GfxRenderer::RenderMode renderMode,
-                           const EpdFontFamily& fontFamily, const EpdFontFamily* fallbackFont, const uint32_t cp,
-                           int cursorX, int cursorY, const bool pixelState, const EpdFontFamily::Style style) {
+                           const EpdFontFamily& fontFamily, const EpdFontFamily* fallbackFont,
+                           const EpdFontFamily* secondaryFallbackFont, const uint32_t cp, int cursorX, int cursorY,
+                           const bool pixelState, const EpdFontFamily::Style style) {
   const EpdFontFamily* usedFont = &fontFamily;
   const EpdGlyph* glyph = nullptr;
 
-  // Try fallback font if primary font doesn't natively have this glyph
+  // Try fallback fonts if primary font doesn't natively have this glyph
   // (avoids replacement glyph ◆ when a fallback font has the real glyph)
   if (!fontFamily.hasNativeGlyph(cp, style)) {
     if (fallbackFont) {
       glyph = fallbackFont->getGlyph(cp, style);
       if (glyph) usedFont = fallbackFont;
+    }
+    if (!glyph && secondaryFallbackFont) {
+      glyph = secondaryFallbackFont->getGlyph(cp, style);
+      if (glyph) usedFont = secondaryFallbackFont;
     }
   }
   if (!glyph) {
@@ -375,6 +380,7 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
   }
 
   const EpdFontFamily* fallbackFont = resolveFallbackFont(*this, fontId, font);
+  const EpdFontFamily* secondaryFallbackFont = getSecondaryFallbackFont(fontId);
   constexpr int MIN_COMBINING_GAP_PX = 1;
   int stackedThaiUpperMaxY = 0;
   bool hasStackedThaiUpper = false;
@@ -389,6 +395,12 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
         combiningGlyph = fallbackFont->getGlyph(cp, style);
         if (combiningGlyph) {
           combiningFontData = fallbackFont->getData(style);
+        }
+      }
+      if (!combiningGlyph && secondaryFallbackFont) {
+        combiningGlyph = secondaryFallbackFont->getGlyph(cp, style);
+        if (combiningGlyph) {
+          combiningFontData = secondaryFallbackFont->getData(style);
         }
       }
       int raiseBy = 0;
@@ -406,14 +418,31 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
             raiseBy = MIN_COMBINING_GAP_PX - currentGap;
           }
         }
+        // Sara Am lookahead: if this is a level-3 tone mark (่ ้ ๊ ๋) and the next
+        // codepoint is ำ (U+0E33), ำ carries an implicit level-2 upper component (◌ั).
+        // Pre-set hasStackedThaiUpper so applyThaiUpperStacking raises the tone mark
+        // above ำ's upper part instead of letting it sink into it (the "จม" problem).
+        if (utf8IsThaiUpperLevelThreeMark(cp) && !hasStackedThaiUpper) {
+          const unsigned char* peekPtr = reinterpret_cast<const unsigned char*>(text);
+          const uint32_t peekCp = utf8NextCodepoint(&peekPtr);
+          if (peekCp == 0x0E33) {  // sara am (ำ) follows
+            const EpdGlyph* saraAmGlyph = font.getGlyph(0x0E33, style);
+            if (!saraAmGlyph && fallbackFont) saraAmGlyph = fallbackFont->getGlyph(0x0E33, style);
+            if (!saraAmGlyph && secondaryFallbackFont) saraAmGlyph = secondaryFallbackFont->getGlyph(0x0E33, style);
+            if (saraAmGlyph) {
+              stackedThaiUpperMaxY = yPos + saraAmGlyph->top;
+              hasStackedThaiUpper = true;
+            }
+          }
+        }
         applyThaiUpperStacking(combiningFontData, cp, combiningGlyph, yPos, &raiseBy, &stackedThaiUpperMaxY,
                                &hasStackedThaiUpper);
       }
 
       const int combiningX = getCombiningAnchorX(xPosFP, lastBaseX, lastBaseAdvanceFP, cp);
       const int combiningY = yPos - raiseBy;
-      renderCharImpl<TextRotation::None>(*this, renderMode, font, fallbackFont, cp, combiningX, combiningY, black,
-                                         style);
+      renderCharImpl<TextRotation::None>(*this, renderMode, font, fallbackFont, secondaryFallbackFont, cp, combiningX,
+                                         combiningY, black, style);
       continue;
     }
 
@@ -426,6 +455,9 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
     if (!glyph && fallbackFont) {
       glyph = fallbackFont->getGlyph(cp, style);
     }
+    if (!glyph && secondaryFallbackFont) {
+      glyph = secondaryFallbackFont->getGlyph(cp, style);
+    }
     if (!glyph) {
       glyph = font.getGlyph(cp, style);  // Fall back to replacement glyph
     }
@@ -434,7 +466,8 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
     lastBaseTop = glyph ? glyph->top : 0;
     hasStackedThaiUpper = false;
 
-    renderCharImpl<TextRotation::None>(*this, renderMode, font, fallbackFont, cp, lastBaseX, yPos, black, style);
+    renderCharImpl<TextRotation::None>(*this, renderMode, font, fallbackFont, secondaryFallbackFont, cp, lastBaseX,
+                                       yPos, black, style);
     if (glyph) {
       xPosFP += glyph->advanceX;  // 12.4 fixed-point advance
     }
@@ -1203,6 +1236,7 @@ int GfxRenderer::getTextAdvanceX(const int fontId, const char* text, EpdFontFami
   int32_t widthFP = 0;  // 12.4 fixed-point accumulator
   const auto& font = fontIt->second;
   const EpdFontFamily* fallbackFont = resolveFallbackFont(*this, fontId, font);
+  const EpdFontFamily* secondaryFallbackFont = getSecondaryFallbackFont(fontId);
   while ((cp = utf8NextCodepoint(reinterpret_cast<const uint8_t**>(&text)))) {
     if (utf8IsCombiningMark(cp)) {
       continue;
@@ -1214,6 +1248,9 @@ int GfxRenderer::getTextAdvanceX(const int fontId, const char* text, EpdFontFami
     const EpdGlyph* glyph = font.hasNativeGlyph(cp, style) ? font.getGlyph(cp, style) : nullptr;
     if (!glyph && fallbackFont) {
       glyph = fallbackFont->getGlyph(cp, style);
+    }
+    if (!glyph && secondaryFallbackFont) {
+      glyph = secondaryFallbackFont->getGlyph(cp, style);
     }
     if (!glyph) {
       glyph = font.getGlyph(cp, style);  // Fall back to replacement glyph
@@ -1237,6 +1274,7 @@ int GfxRenderer::getTextFitWidth(const int fontId, const char* text, EpdFontFami
 
   const auto& font = fontIt->second;
   const EpdFontFamily* fallbackFont = resolveFallbackFont(*this, fontId, font);
+  const EpdFontFamily* secondaryFallbackFont = getSecondaryFallbackFont(fontId);
   int32_t cursorXFP = 0;  // 12.4 fixed-point accumulator
   int lastBaseX = 0;
   int lastBaseAdvanceFP = 0;
@@ -1256,6 +1294,9 @@ int GfxRenderer::getTextFitWidth(const int fontId, const char* text, EpdFontFami
     const EpdGlyph* glyph = font.hasNativeGlyph(cp, style) ? font.getGlyph(cp, style) : nullptr;
     if (!glyph && fallbackFont) {
       glyph = fallbackFont->getGlyph(cp, style);
+    }
+    if (!glyph && secondaryFallbackFont) {
+      glyph = secondaryFallbackFont->getGlyph(cp, style);
     }
     if (!glyph) {
       glyph = font.getGlyph(cp, style);  // Fall back to replacement glyph
@@ -1326,6 +1367,7 @@ void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y
 
   const auto& font = fontIt->second;
   const EpdFontFamily* fallbackFont = resolveFallbackFont(*this, fontId, font);
+  const EpdFontFamily* secondaryFallbackFont = getSecondaryFallbackFont(fontId);
 
   int32_t yPosFP = fp4::fromPixel(y);  // 12.4 fixed-point accumulator
   int lastBaseY = y;
@@ -1341,6 +1383,9 @@ void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y
       if (!combiningGlyph && fallbackFont) {
         combiningGlyph = fallbackFont->getGlyph(cp, style);
       }
+      if (!combiningGlyph && secondaryFallbackFont) {
+        combiningGlyph = secondaryFallbackFont->getGlyph(cp, style);
+      }
       int raiseBy = 0;
       if (combiningGlyph) {
         const int currentGap = combiningGlyph->top - combiningGlyph->height - lastBaseTop;
@@ -1351,8 +1396,8 @@ void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y
 
       const int combiningX = x - raiseBy;
       const int combiningY = getCombiningAnchorYRotated(yPosFP, lastBaseY, lastBaseAdvanceFP, cp);
-      renderCharImpl<TextRotation::Rotated90CW>(*this, renderMode, font, fallbackFont, cp, combiningX, combiningY,
-                                                black, style);
+      renderCharImpl<TextRotation::Rotated90CW>(*this, renderMode, font, fallbackFont, secondaryFallbackFont, cp,
+                                                combiningX, combiningY, black, style);
       continue;
     }
 
@@ -1366,6 +1411,9 @@ void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y
     if (!glyph && fallbackFont) {
       glyph = fallbackFont->getGlyph(cp, style);
     }
+    if (!glyph && secondaryFallbackFont) {
+      glyph = secondaryFallbackFont->getGlyph(cp, style);
+    }
     if (!glyph) {
       glyph = font.getGlyph(cp, style);  // Fall back to replacement glyph
     }
@@ -1373,7 +1421,8 @@ void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y
     lastBaseAdvanceFP = glyph ? glyph->advanceX : 0;  // 12.4 fixed-point
     lastBaseTop = glyph ? glyph->top : 0;
 
-    renderCharImpl<TextRotation::Rotated90CW>(*this, renderMode, font, fallbackFont, cp, x, lastBaseY, black, style);
+    renderCharImpl<TextRotation::Rotated90CW>(*this, renderMode, font, fallbackFont, secondaryFallbackFont, cp, x,
+                                              lastBaseY, black, style);
     if (glyph) {
       yPosFP -= glyph->advanceX;  // 12.4 fixed-point advance (subtract for rotated)
     }

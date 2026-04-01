@@ -99,7 +99,8 @@ void ModernTheme::drawBatteryLeft(const GfxRenderer& renderer, Rect rect, const 
 
   if (showPercentage) {
     const auto percentageText = std::to_string(percentage) + "%";
-    renderer.drawText(SMALL_FONT_ID, rect.x + batteryPercentSpacing + battWidth, rect.y, percentageText.c_str());
+    renderer.drawText(SMALL_FONT_ID, rect.x + batteryPercentSpacing + battWidth, rect.y, percentageText.c_str(), true,
+                      EpdFontFamily::BOLD);
   }
 
   const int x = rect.x;
@@ -129,10 +130,11 @@ void ModernTheme::drawBatteryRight(const GfxRenderer& renderer, Rect rect, const
 
   if (showPercentage) {
     const auto percentageText = std::to_string(percentage) + "%";
-    const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, percentageText.c_str());
+    const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, percentageText.c_str(), EpdFontFamily::BOLD);
     const auto textHeight = renderer.getTextHeight(SMALL_FONT_ID);
     renderer.fillRect(rect.x - textWidth - batteryPercentSpacing, rect.y, textWidth, textHeight, false);
-    renderer.drawText(SMALL_FONT_ID, rect.x - textWidth - batteryPercentSpacing, rect.y, percentageText.c_str());
+    renderer.drawText(SMALL_FONT_ID, rect.x - textWidth - batteryPercentSpacing, rect.y, percentageText.c_str(), true,
+                      EpdFontFamily::BOLD);
   }
 
   const int x = rect.x;
@@ -443,10 +445,10 @@ void ModernTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const
       } else if (isDirectionLabel(labels[i], dirRight)) {
         drawRightArrow(renderer, x + btnWidth / 2, btnTop + btnHeight / 2, 10);
       } else {
-        const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, labels[i]);
+        const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, labels[i], EpdFontFamily::BOLD);
         const int textX = x + (btnWidth - textWidth) / 2;
         const int textY = btnTop + (btnHeight - renderer.getLineHeight(SMALL_FONT_ID)) / 2;
-        renderer.drawText(SMALL_FONT_ID, textX, textY, labels[i]);
+        renderer.drawText(SMALL_FONT_ID, textX, textY, labels[i], true, EpdFontFamily::BOLD);
       }
     } else {
       // Empty button: smaller stub at bottom
@@ -766,13 +768,13 @@ void ModernTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const st
     const int textCenterX = rect.x + rect.width / 2;
 
     // Fixed Y offsets within info area (120px total):
-    //  +6   title (1 line, truncated)
-    //  +28  author (1 line, truncated)
-    //  +48  progress bar
-    //  +66  dots
+    //  +4   title (1 line, truncated, UI_10 ~14px + Thai diacritics headroom)
+    //  +32  author (1 line, truncated, SMALL ~10px)
+    //  +76  progress bar
+    //  +94  dots
     //  +119 divider
-    constexpr int titleOffset = 6;
-    constexpr int authorOffset = 28;
+    constexpr int titleOffset = 4;
+    constexpr int authorOffset = 32;
     constexpr int progressOffset = 76;
     constexpr int dotsOffset = 94;
 
@@ -789,9 +791,9 @@ void ModernTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const st
     }
 
     // Title: 1 line only, truncated, centered
-    auto title = renderer.truncatedText(SMALL_FONT_ID, book.title.c_str(), textAreaWidth, EpdFontFamily::REGULAR);
-    const int titleW = renderer.getTextWidth(SMALL_FONT_ID, title.c_str(), EpdFontFamily::REGULAR);
-    renderer.drawText(SMALL_FONT_ID, textCenterX - titleW / 2, infoStart + titleOffset, title.c_str(), !inverted,
+    auto title = renderer.truncatedText(UI_10_FONT_ID, book.title.c_str(), textAreaWidth, EpdFontFamily::REGULAR);
+    const int titleW = renderer.getTextWidth(UI_10_FONT_ID, title.c_str(), EpdFontFamily::REGULAR);
+    renderer.drawText(UI_10_FONT_ID, textCenterX - titleW / 2, infoStart + titleOffset, title.c_str(), !inverted,
                       EpdFontFamily::REGULAR);
 
     // Author: 1 line only, truncated, centered

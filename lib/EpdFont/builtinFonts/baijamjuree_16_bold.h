@@ -2842,7 +2842,7 @@ static const EpdFontData baijamjuree_16_bold = {
     baijamjuree_16_boldGlyphs,
     baijamjuree_16_boldIntervals,
     57,
-    42,
+    52,
     34,
     -9,
     true,

@@ -731,6 +731,9 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
       }
       // Whitespace is a real word boundary — reset continuation state
       self->nextWordContinues = false;
+      // Flag that a real space was seen; if a ZWS follows immediately, suppress it so the
+      // visible gap is preserved instead of being swallowed by the zero-width token chain.
+      self->spaceBeforeZWS = true;
       // Skip the whitespace char
       continue;
     }
@@ -794,10 +797,24 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
     // We emit it as its own zero-width token that attaches to the previous word. The following
     // word does not attach back to it, which gives ParsedText a legal break opportunity after the
     // marker while keeping the on-line rendering gapless.
+    //
+    // Exception: EPUBs like Thai-translated novels encode space-separated punctuation as
+    // "word + ZWS + U+0020 + ZWS + (" so every syllable boundary is a potential line-break
+    // site while still preserving a visible space.  When a real U+0020 was seen immediately
+    // before this ZWS, the ZWS is redundant — suppressing it lets the next word keep its
+    // natural space gap instead of being swallowed by the zero-width token chain.
     if (static_cast<uint8_t>(s[i]) == 0xE2 && i + 2 < len && static_cast<uint8_t>(s[i + 1]) == 0x80 &&
         static_cast<uint8_t>(s[i + 2]) == 0x8B) {
       if (self->partWordBufferIndex > 0) {
         self->flushPartWordBuffer();
+      }
+
+      if (self->spaceBeforeZWS) {
+        // A real space just preceded this ZWS — drop the ZWS so the visible gap
+        // is not suppressed by boundaryAdvance's zero-width-token shortcut.
+        self->spaceBeforeZWS = false;
+        i += 2;
+        continue;
       }
 
       self->partWordBuffer[0] = static_cast<char>(0xE2);
@@ -865,6 +882,9 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
       }
     }
 
+    // A real visible character is being accumulated — any preceding space has been consumed
+    // as a word boundary already, so the ZWS-suppression flag is no longer relevant.
+    self->spaceBeforeZWS = false;
     self->partWordBuffer[self->partWordBufferIndex++] = s[i];
   }
 

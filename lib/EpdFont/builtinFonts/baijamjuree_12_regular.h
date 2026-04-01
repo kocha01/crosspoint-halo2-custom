@@ -2349,7 +2349,7 @@ static const EpdFontData baijamjuree_12_regular = {
     baijamjuree_12_regularGlyphs,
     baijamjuree_12_regularIntervals,
     57,
-    31,
+    38,
     25,
     -7,
     true,

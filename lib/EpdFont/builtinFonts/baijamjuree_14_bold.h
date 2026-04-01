@@ -2651,7 +2651,7 @@ static const EpdFontData baijamjuree_14_bold = {
     baijamjuree_14_boldGlyphs,
     baijamjuree_14_boldIntervals,
     57,
-    36,
+    45,
     30,
     -8,
     true,

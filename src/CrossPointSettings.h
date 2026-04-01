@@ -93,7 +93,7 @@ class CrossPointSettings {
   enum SIDE_BUTTON_LAYOUT { PREV_NEXT = 0, NEXT_PREV = 1, SIDE_BUTTON_LAYOUT_COUNT };
 
   // Font family options
-  enum FONT_FAMILY { BAIJAMJUREE = 0, CLOUDLOOP = 1, BOOKERLY = 2, ITIM = 3, MALI = 4, FONT_FAMILY_COUNT };
+  enum FONT_FAMILY { BAIJAMJUREE = 0, CLOUDLOOP = 1, BOOKERLY = 2, FONT_FAMILY_COUNT };
   // Reader font sizes are stored as actual point values.
   enum FONT_SIZE : uint8_t { FONT_12 = 12, FONT_14 = 14, FONT_16 = 16, FONT_18 = 18, FONT_20 = 20 };
   static constexpr uint8_t FONT_SIZE_MIN = FONT_12;
@@ -130,7 +130,7 @@ class CrossPointSettings {
   };
 
   // Short power button press actions
-  enum SHORT_PWRBTN { IGNORE = 0, SLEEP = 1, PAGE_TURN = 2, SHORT_PWRBTN_COUNT };
+  enum SHORT_PWRBTN { IGNORE = 0, PAGE_TURN = 1, SHORT_PWRBTN_COUNT };
 
   // Hide battery percentage
   enum HIDE_BATTERY_PERCENTAGE { HIDE_NEVER = 0, HIDE_READER = 1, HIDE_ALWAYS = 2, HIDE_BATTERY_PERCENTAGE_COUNT };
@@ -218,9 +218,7 @@ class CrossPointSettings {
   // Get singleton instance
   static CrossPointSettings& getInstance() { return instance; }
 
-  uint16_t getPowerButtonDuration() const {
-    return (shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::SLEEP) ? 10 : 400;
-  }
+  uint16_t getPowerButtonDuration() const { return 400; }
   int getReaderFontId() const;
 
   /// Returns the Thai-capable fallback font ID (NotoSans) for the current font size
