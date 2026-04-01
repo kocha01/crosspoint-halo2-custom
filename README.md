@@ -1,4 +1,11 @@
-# CrossPoint Reader
+# CrossPoint Halo 2 Custom Firmware
+
+> **Fork of [CrossPoint Reader](https://github.com/crosspoint-reader/crosspoint-reader)** — customised for Thai language support, improved typography, and Halo 2 UI improvements.
+>
+> 🤖 **Built with [Claude](https://claude.ai) via Vibe Coding.**
+> This firmware was developed collaboratively with AI. Using AI as a tool doesn't make the work less real — it just means the problems get solved faster. If that bothers you, that's okay.
+
+---
 
 Firmware for the **Xteink X4** e-paper display reader (unaffiliated with Xteink).
 Built using **PlatformIO** and targeting the **ESP32-C3** microcontroller.
