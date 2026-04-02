@@ -11,25 +11,25 @@ ICONS_DIR = "src/components/icons"
 
 # Material Icons to download: (output_filename, material_icon_name, size, var_name)
 ICONS = [
-    ("book.h",     "auto_stories",   32, "BookIcon"),
-    ("book24.h",   "auto_stories",   24, "Book24Icon"),
-    ("folder.h",   "folder_open",    32, "FolderIcon"),
-    ("folder24.h", "folder_open",    24, "Folder24Icon"),
-    ("recent.h",   "history",        32, "RecentIcon"),
-    ("settings.h", "tune",           32, "SettingsIcon"),
-    ("settings2.h","settings",       32, "Settings2Icon"),
-    ("wifi.h",     "wifi",           32, "WifiIcon"),
-    ("hotspot.h",  "wifi_tethering", 32, "HotspotIcon"),
-    ("transfer.h", "sync_alt",       32, "TransferIcon"),
-    ("library.h",  "local_library",  32, "LibraryIcon"),
-    ("file24.h",   "description",    24, "File24Icon"),
-    ("text24.h",   "article",        24, "Text24Icon"),
-    ("image24.h",  "image",          24, "Image24Icon"),
-    ("cog.h",      "settings",       32, "CogIcon"),
-    ("cover.h",    "image",          32, "CoverIcon"),
+    ("book.h",     "menu_book",           32, "BookIcon"),
+    ("book24.h",   "menu_book",           24, "Book24Icon"),
+    ("folder.h",   "folder",              32, "FolderIcon"),
+    ("folder24.h", "folder",              24, "Folder24Icon"),
+    ("recent.h",   "schedule",            32, "RecentIcon"),
+    ("settings.h", "tune",               32, "SettingsIcon"),
+    ("settings2.h","settings",            32, "Settings2Icon"),
+    ("wifi.h",     "wifi",               32, "WifiIcon"),
+    ("hotspot.h",  "wifi_tethering",     32, "HotspotIcon"),
+    ("transfer.h", "sync",               32, "TransferIcon"),
+    ("library.h",  "collections_bookmark",32, "LibraryIcon"),
+    ("file24.h",   "draft",              24, "File24Icon"),
+    ("text24.h",   "text_snippet",       24, "Text24Icon"),
+    ("image24.h",  "photo",              24, "Image24Icon"),
+    ("cog.h",      "settings",           32, "CogIcon"),
+    ("cover.h",    "photo",              32, "CoverIcon"),
 ]
 
-BASE_URL = "https://raw.githubusercontent.com/google/material-design-icons/master/symbols/web/{name}/materialsymbolsoutlined/{name}_24px.svg"
+BASE_URL = "https://raw.githubusercontent.com/google/material-design-icons/master/symbols/web/{name}/materialsymbolsrounded/{name}_24px.svg"
 
 def svg_to_bitmap_bytes(svg_data: bytes, size: int) -> list[int]:
     """Convert SVG bytes to 1-bit packed bitmap bytes.
