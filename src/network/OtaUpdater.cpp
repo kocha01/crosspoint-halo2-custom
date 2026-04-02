@@ -4,7 +4,7 @@
 #include <Logging.h>
 
 #include "esp_http_client.h"
-#include "esp_https_ota.h"
+#include "esp_ota_ops.h"
 #include "esp_wifi.h"
 
 namespace {
@@ -23,8 +23,22 @@ extern "C" {
 extern esp_err_t esp_crt_bundle_attach(void* conf);
 }
 
-esp_err_t http_client_set_header_cb(esp_http_client_handle_t http_client) {
-  return esp_http_client_set_header(http_client, "User-Agent", "CrossPoint-ESP32-" CROSSPOINT_VERSION);
+struct OtaWriteCtx {
+  esp_ota_handle_t handle;
+  esp_err_t write_err;
+  size_t* processedSize;
+  bool* render;
+};
+
+esp_err_t ota_write_event_handler(esp_http_client_event_t* evt) {
+  if (evt->event_id != HTTP_EVENT_ON_DATA) return ESP_OK;
+  auto* ctx = static_cast<OtaWriteCtx*>(evt->user_data);
+  if (ctx->write_err == ESP_OK) {
+    ctx->write_err = esp_ota_write(ctx->handle, evt->data, evt->data_len);
+    *ctx->processedSize += evt->data_len;
+    *ctx->render = true;
+  }
+  return ESP_OK;
 }
 
 esp_err_t event_handler(esp_http_client_event_t* event) {
@@ -205,66 +219,80 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
     return UPDATE_OLDER_ERROR;
   }
 
-  esp_https_ota_handle_t ota_handle = NULL;
-  esp_err_t esp_err;
-  /* Signal for OtaUpdateActivity */
   render = false;
+  processedSize = 0;
 
+  const esp_partition_t* ota_partition = esp_ota_get_next_update_partition(nullptr);
+  if (!ota_partition) {
+    LOG_ERR("OTA", "No OTA partition found");
+    return INTERNAL_UPDATE_ERROR;
+  }
+
+  esp_ota_handle_t ota_handle = 0;
+  esp_err_t esp_err = esp_ota_begin(ota_partition, OTA_WITH_SEQUENTIAL_WRITES, &ota_handle);
+  if (esp_err != ESP_OK) {
+    LOG_ERR("OTA", "esp_ota_begin failed: %s", esp_err_to_name(esp_err));
+    return INTERNAL_UPDATE_ERROR;
+  }
+
+  OtaWriteCtx ctx = {ota_handle, ESP_OK, &processedSize, &render};
+
+  /* esp_http_client_perform follows HTTP redirects (unlike esp_https_ota_begin
+   * which uses esp_http_client_open internally and does not follow redirects).
+   * GitHub browser_download_url redirects to CDN, so this is required. */
   esp_http_client_config_t client_config = {
       .url = otaUrl.c_str(),
-      .timeout_ms = 15000,
+      .timeout_ms = 60000,
       .max_redirection_count = 5,
-      /* Default HTTP client buffer size 512 byte only
-       * not sufficent to handle URL redirection cases or
-       * parsing of large HTTP headers.
-       */
+      .event_handler = ota_write_event_handler,
       .buffer_size = 8192,
       .buffer_size_tx = 8192,
+      .user_data = &ctx,
       .skip_cert_common_name_check = true,
       .crt_bundle_attach = esp_crt_bundle_attach,
       .keep_alive_enable = true,
   };
 
-  esp_https_ota_config_t ota_config = {
-      .http_config = &client_config,
-      .http_client_init_cb = http_client_set_header_cb,
-  };
-
   /* For better timing and connectivity, we disable power saving for WiFi */
   esp_wifi_set_ps(WIFI_PS_NONE);
 
-  esp_err = esp_https_ota_begin(&ota_config, &ota_handle);
-  if (esp_err != ESP_OK) {
-    LOG_DBG("OTA", "HTTP OTA Begin Failed: %s", esp_err_to_name(esp_err));
+  esp_http_client_handle_t client = esp_http_client_init(&client_config);
+  if (!client) {
+    LOG_ERR("OTA", "HTTP client init failed");
+    esp_ota_abort(ota_handle);
+    esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
     return INTERNAL_UPDATE_ERROR;
   }
 
-  do {
-    esp_err = esp_https_ota_perform(ota_handle);
-    processedSize = esp_https_ota_get_image_len_read(ota_handle);
-    /* Sent signal to  OtaUpdateActivity */
-    render = true;
-    delay(100);  // TODO: should we replace this with something better?
-  } while (esp_err == ESP_ERR_HTTPS_OTA_IN_PROGRESS);
+  esp_http_client_set_header(client, "User-Agent", "CrossPoint-ESP32-" CROSSPOINT_VERSION);
 
-  /* Return back to default power saving for WiFi in case of failing */
+  esp_err = esp_http_client_perform(client);
+  esp_http_client_cleanup(client);
+
+  /* Return back to default power saving for WiFi */
   esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
 
   if (esp_err != ESP_OK) {
-    LOG_ERR("OTA", "esp_https_ota_perform Failed: %s", esp_err_to_name(esp_err));
-    esp_https_ota_finish(ota_handle);
+    LOG_ERR("OTA", "HTTP download failed: %s", esp_err_to_name(esp_err));
+    esp_ota_abort(ota_handle);
     return HTTP_ERROR;
   }
 
-  if (!esp_https_ota_is_complete_data_received(ota_handle)) {
-    LOG_ERR("OTA", "esp_https_ota_is_complete_data_received Failed: %s", esp_err_to_name(esp_err));
-    esp_https_ota_finish(ota_handle);
+  if (ctx.write_err != ESP_OK) {
+    LOG_ERR("OTA", "OTA write failed: %s", esp_err_to_name(ctx.write_err));
+    esp_ota_abort(ota_handle);
     return INTERNAL_UPDATE_ERROR;
   }
 
-  esp_err = esp_https_ota_finish(ota_handle);
+  esp_err = esp_ota_end(ota_handle);
   if (esp_err != ESP_OK) {
-    LOG_ERR("OTA", "esp_https_ota_finish Failed: %s", esp_err_to_name(esp_err));
+    LOG_ERR("OTA", "esp_ota_end failed: %s", esp_err_to_name(esp_err));
+    return INTERNAL_UPDATE_ERROR;
+  }
+
+  esp_err = esp_ota_set_boot_partition(ota_partition);
+  if (esp_err != ESP_OK) {
+    LOG_ERR("OTA", "esp_ota_set_boot_partition failed: %s", esp_err_to_name(esp_err));
     return INTERNAL_UPDATE_ERROR;
   }
 
