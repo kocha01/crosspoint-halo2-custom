@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toggle Style Refined — B1, B2, B3</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #d0d0d0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    gap: 30px;
+    flex-wrap: wrap;
+    font-family: 'Noto Sans Thai Looped', sans-serif;
+  }
+
+  .label { text-align: center; margin-bottom: 8px; font-size: 13px; color: #555; font-weight: 700; }
+  .label small { display: block; font-weight: 400; font-size: 11px; color: #777; margin-top: 2px; }
+
+  .screen {
+    width: 480px; height: 800px; background: #fff;
+    position: relative; overflow: hidden;
+    border: 1px solid #aaa; box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  }
+
+  .hdr { height: 50px; padding: 8px 16px 0; text-align: center; border-bottom: 1px solid #bbb; }
+  .hdr-title { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; }
+  .hdr-sub { font-size: 11px; color: #555; line-height: 1.3; }
+
+  .hints { position: absolute; bottom: 0; left: 0; right: 0; height: 40px; display: flex; border-top: 2px solid #000; }
+  .hints .h { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; font-family: 'Noto Sans Thai Looped', sans-serif; background: #fff; border-right: 1px solid #000; }
+  .hints .h:last-child { border-right: none; }
+
+  .split { display: flex; height: 710px; }
+
+  .side { width: 72px; border-right: 2px solid #000; background: #fff; flex-shrink: 0; display: flex; flex-direction: column; align-items: stretch; padding-top: 8px; }
+  .side-item { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 2px; border-bottom: 1px solid #ddd; }
+  .side-item:last-child { border-bottom: none; }
+  .side-item.active { background: #000; color: #fff; }
+  .side-icon { font-size: 18px; line-height: 1; margin-bottom: 2px; }
+  .side-label { font-size: 8px; line-height: 1.2; text-align: center; }
+
+  /* ══════════════════════════════════════════════════════
+     SHARED: Toggle & Chip components
+     ══════════════════════════════════════════════════════ */
+  /* Toggle pill */
+  .tog {
+    width: 38px; height: 18px;
+    border-radius: 9px;
+    border: 2px solid #aaa;
+    background: #fff;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .tog::after {
+    content: '';
+    position: absolute;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #aaa;
+    top: 2px; left: 3px;
+  }
+  .tog.on { border-color: #000; background: #000; }
+  .tog.on::after { background: #fff; left: 21px; }
+
+  /* Chip */
+  .chip {
+    font-size: 11px;
+    padding: 2px 10px;
+    border: 1.5px solid #ccc;
+    border-radius: 6px;
+    color: #555;
+    flex-shrink: 0;
+  }
+
+  /* ══════════════════════════════════════════════════════
+     B1 — Clean Sections + Accent Line + Toggle
+     ══════════════════════════════════════════════════════ */
+  .b1-content {
+    flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+  }
+  .b1-section {
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1.2px;
+    color: #999;
+    padding: 14px 16px 6px;
+    flex-shrink: 0;
+  }
+  .b1-row {
+    display: flex;
+    align-items: center;
+    height: 46px; min-height: 46px;
+    padding: 0 14px;
+    font-size: 13px;
+    flex-shrink: 0;
+    border-bottom: 1px solid #f0f0f0;
+    margin: 0 6px;
+    border-radius: 6px;
+  }
+  .b1-row .accent {
+    width: 3px; height: 28px;
+    border-radius: 6px;
+    background: transparent;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+  .b1-row.sel .accent { background: #000; }
+  .b1-row.sel { background: #f5f5f5; border-radius: 6px; }
+  .b1-row .name { flex: 1; }
+  .b1-row .name small {
+    display: block;
+    font-size: 9px;
+    color: #999;
+    line-height: 1.2;
+    margin-top: -1px;
+  }
+  .b1-row.sel .chip { border-color: #000; color: #000; font-weight: 700; }
+  .b1-row.sel .tog { border-color: #000; }
+
+  /* ══════════════════════════════════════════════════════
+     B2 — Boxed Rows + Value Right + Toggle
+     ══════════════════════════════════════════════════════ */
+  .b2-content {
+    flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+    padding: 8px 10px;
+    gap: 4px;
+  }
+  .b2-section {
+    font-size: 9px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1.5px;
+    color: #aaa;
+    padding: 8px 6px 2px;
+    flex-shrink: 0;
+  }
+  .b2-row {
+    display: flex;
+    align-items: center;
+    height: 44px; min-height: 44px;
+    padding: 0 12px;
+    font-size: 13px;
+    flex-shrink: 0;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 6px;
+    background: #fff;
+  }
+  .b2-row.sel {
+    border-color: #000;
+    background: #000;
+    color: #fff;
+  }
+  .b2-row .name { flex: 1; }
+  .b2-row .val {
+    font-size: 12px;
+    color: #666;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .b2-row.sel .val { color: #bbb; }
+  .b2-row.sel .chip { border-color: #555; color: #bbb; }
+  .b2-row.sel .tog.on { background: #fff; border-color: #fff; }
+  .b2-row.sel .tog.on::after { background: #000; }
+  .b2-row.sel .tog { border-color: #666; }
+  .b2-row.sel .tog::after { background: #666; }
+  .b2-row .arrow { color: #aaa; font-size: 14px; margin-left: 4px; }
+  .b2-row.sel .arrow { color: #666; }
+
+  /* ══════════════════════════════════════════════════════
+     B3 — Big Toggle Label + Inline Value
+     ══════════════════════════════════════════════════════ */
+  .b3-content {
+    flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+  }
+  .b3-banner {
+    padding: 12px 16px 10px;
+    border-bottom: 2px solid #000;
+    flex-shrink: 0;
+  }
+  .b3-banner-title { font-size: 18px; font-weight: 700; }
+  .b3-row {
+    display: flex;
+    align-items: center;
+    min-height: 52px;
+    padding: 8px 16px;
+    font-size: 13px;
+    flex-shrink: 0;
+    border-bottom: 1px solid #eee;
+  }
+  .b3-row.sel { background: #f3f3f3; }
+  .b3-row .info { flex: 1; }
+  .b3-row .info .name {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .b3-row .info .desc {
+    font-size: 10px;
+    color: #888;
+    line-height: 1.3;
+  }
+  .b3-row.sel .info .name { color: #000; }
+  /* Big toggle for B3 */
+  .b3-tog {
+    width: 44px; height: 22px;
+    border-radius: 11px;
+    border: 2px solid #aaa;
+    background: #eee;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .b3-tog::after {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #aaa;
+    top: 2px; left: 3px;
+  }
+  .b3-tog.on { border-color: #000; background: #000; }
+  .b3-tog.on::after { background: #fff; left: 23px; }
+  /* B3 value badge */
+  .b3-badge {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 14px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    color: #333;
+    flex-shrink: 0;
+  }
+  .b3-row.sel .b3-badge {
+    background: #000;
+    color: #fff;
+  }
+  .b3-row .arrow {
+    font-size: 16px;
+    color: #aaa;
+    margin-left: 8px;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ B1: Clean Sections + Accent ============ -->
+<div>
+  <div class="label">
+    B1 — Accent Bar + Toggles
+    <small>Clean sections, left accent on focus, subtle bg highlight</small>
+  </div>
+  <div class="screen">
+    <div class="hdr">
+      <div class="hdr-title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="hdr-sub">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+    <div class="split">
+      <div class="side">
+        <div class="side-item"><div class="side-icon">Aa</div><div class="side-label">Font</div></div>
+        <div class="side-item active"><div class="side-icon">◐</div><div class="side-label">Display</div></div>
+        <div class="side-item"><div class="side-icon">⇥</div><div class="side-label">Navigate</div></div>
+        <div class="side-item"><div class="side-icon">⚙</div><div class="side-label">Tools</div></div>
+      </div>
+      <div class="b1-content">
+        <div class="b1-section">Appearance</div>
+        <div class="b1-row sel">
+          <div class="accent"></div>
+          <span class="name">Dark Mode</span>
+          <div class="tog on"></div>
+        </div>
+        <div class="b1-row">
+          <div class="accent"></div>
+          <span class="name">Screen Margin</span>
+          <span class="chip">35 px</span>
+        </div>
+        <div class="b1-row">
+          <div class="accent"></div>
+          <span class="name">Orientation</span>
+          <span class="chip">Portrait</span>
+        </div>
+        <div class="b1-section">Screen</div>
+        <div class="b1-row">
+          <div class="accent"></div>
+          <span class="name">
+            Status Bar
+            <small>Customise items shown</small>
+          </span>
+          <span class="chip">Edit ›</span>
+        </div>
+        <div class="b1-row">
+          <div class="accent"></div>
+          <span class="name">Refresh Freq</span>
+          <span class="chip">15 pages</span>
+        </div>
+        <div class="b1-row">
+          <div class="accent"></div>
+          <span class="name">Fading Fix</span>
+          <div class="tog"></div>
+        </div>
+      </div>
+    </div>
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">Select</div>
+      <div class="h">◀ Tab</div>
+      <div class="h">Tab ▶</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ B2: Boxed Rows ============ -->
+<div>
+  <div class="label">
+    B2 — Boxed Cards + Toggles
+    <small>Each row is a bordered card, selected = inverted</small>
+  </div>
+  <div class="screen">
+    <div class="hdr">
+      <div class="hdr-title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="hdr-sub">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+    <div class="split">
+      <div class="side">
+        <div class="side-item active"><div class="side-icon">Aa</div><div class="side-label">Font</div></div>
+        <div class="side-item"><div class="side-icon">◐</div><div class="side-label">Display</div></div>
+        <div class="side-item"><div class="side-icon">⇥</div><div class="side-label">Navigate</div></div>
+        <div class="side-item"><div class="side-icon">⚙</div><div class="side-label">Tools</div></div>
+      </div>
+      <div class="b2-content">
+        <div class="b2-section">Typography</div>
+        <div class="b2-row sel">
+          <span class="name">Font Family</span>
+          <span class="chip">Cloud Loop</span>
+        </div>
+        <div class="b2-row">
+          <span class="name">Font Size</span>
+          <span class="val">16</span>
+        </div>
+        <div class="b2-row">
+          <span class="name">Line Spacing</span>
+          <span class="chip">Wide</span>
+        </div>
+        <div class="b2-section">Layout</div>
+        <div class="b2-row">
+          <span class="name">Alignment</span>
+          <span class="chip">Justified</span>
+        </div>
+        <div class="b2-row">
+          <span class="name">Hyphenation</span>
+          <div class="tog"></div>
+        </div>
+        <div class="b2-section">Rendering</div>
+        <div class="b2-row">
+          <span class="name">Embedded Style</span>
+          <div class="tog on"></div>
+        </div>
+        <div class="b2-row">
+          <span class="name">Anti-aliasing</span>
+          <div class="tog on"></div>
+        </div>
+      </div>
+    </div>
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">Select</div>
+      <div class="h">◀ Tab</div>
+      <div class="h">Tab ▶</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ B3: Big Toggle + Description ============ -->
+<div>
+  <div class="label">
+    B3 — Big Toggle + Description
+    <small>Bold title, name+desc rows, larger toggle, value badge</small>
+  </div>
+  <div class="screen">
+    <div class="hdr">
+      <div class="hdr-title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="hdr-sub">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+    <div class="split">
+      <div class="side">
+        <div class="side-item"><div class="side-icon">Aa</div><div class="side-label">Font</div></div>
+        <div class="side-item active"><div class="side-icon">◐</div><div class="side-label">Display</div></div>
+        <div class="side-item"><div class="side-icon">⇥</div><div class="side-label">Navigate</div></div>
+        <div class="side-item"><div class="side-icon">⚙</div><div class="side-label">Tools</div></div>
+      </div>
+      <div class="b3-content">
+        <div class="b3-banner">
+          <div class="b3-banner-title">Display</div>
+        </div>
+        <div class="b3-row sel">
+          <div class="info">
+            <div class="name">Dark Mode</div>
+            <div class="desc">Invert screen colors for reading in low light</div>
+          </div>
+          <div class="b3-tog on"></div>
+        </div>
+        <div class="b3-row">
+          <div class="info">
+            <div class="name">Screen Margin</div>
+            <div class="desc">Space between text and screen edge</div>
+          </div>
+          <span class="b3-badge">35</span>
+        </div>
+        <div class="b3-row">
+          <div class="info">
+            <div class="name">Orientation</div>
+            <div class="desc">Screen rotation direction</div>
+          </div>
+          <span class="b3-badge">Portrait</span>
+        </div>
+        <div class="b3-row">
+          <div class="info">
+            <div class="name">Status Bar</div>
+            <div class="desc">Choose which items to display</div>
+          </div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="b3-row">
+          <div class="info">
+            <div class="name">Refresh Freq</div>
+            <div class="desc">Full refresh every N pages</div>
+          </div>
+          <span class="b3-badge">15</span>
+        </div>
+        <div class="b3-row">
+          <div class="info">
+            <div class="name">Fading Fix</div>
+            <div class="desc">Extra refresh to reduce ghosting</div>
+          </div>
+          <div class="b3-tog"></div>
+        </div>
+      </div>
+    </div>
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">Select</div>
+      <div class="h">◀ Tab</div>
+      <div class="h">Tab ▶</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C6 — Sidebar Split (1:1 Scale, 480×800)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #d0d0d0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    gap: 40px;
+    font-family: 'Noto Sans Thai Looped', sans-serif;
+  }
+
+  .label {
+    text-align: center;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: #555;
+    font-weight: 700;
+  }
+
+  /* 1:1 pixel device frame — 480 x 800 */
+  .screen {
+    width: 480px;
+    height: 800px;
+    background: #fff;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #aaa;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    /* E-ink look */
+    image-rendering: pixelated;
+  }
+
+  /* ── Shared metrics (matching firmware BaseMetrics) ── */
+  /* UI_10 ≈ 13px, UI_12 ≈ 16px on screen at this DPI */
+  /* listRowHeight = 30px, buttonHintsHeight = 40px, headerHeight = 45px */
+
+  /* ── Header ── */
+  .hdr {
+    height: 50px;
+    padding: 8px 16px 0;
+    text-align: center;
+    border-bottom: 1px solid #bbb;
+  }
+  .hdr-title {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.4;
+  }
+  .hdr-sub {
+    font-size: 11px;
+    color: #555;
+    line-height: 1.3;
+  }
+
+  /* ── Button hints bar (bottom, 40px) ── */
+  .hints {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 40px;
+    display: flex;
+    border-top: 2px solid #000;
+  }
+  .hints .h {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-family: 'Noto Sans Thai Looped', sans-serif;
+    background: #fff;
+    border-right: 1px solid #000;
+  }
+  .hints .h:last-child { border-right: none; }
+
+  /* ── Split layout: sidebar + content ── */
+  /* Available: 800 - 50 (header) - 40 (hints) = 710px */
+  .split {
+    display: flex;
+    height: 710px;
+  }
+
+  /* ── Sidebar (left) ── */
+  .side {
+    width: 72px;
+    border-right: 2px solid #000;
+    background: #fff;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding-top: 8px;
+  }
+  .side-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 2px;
+    border-bottom: 1px solid #ddd;
+    min-height: 0;
+  }
+  .side-item:last-child { border-bottom: none; }
+  .side-item.active {
+    background: #000;
+    color: #fff;
+  }
+  .side-icon {
+    font-size: 18px;
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+  .side-label {
+    font-size: 8px;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  /* ── Content (right) ── */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .content-hdr {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 10px 16px 6px;
+    color: #888;
+    border-bottom: 1px solid #ddd;
+    flex-shrink: 0;
+  }
+
+  /* List rows — 30px height matching firmware listRowHeight */
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 42px;
+    min-height: 42px;
+    padding: 0 16px;
+    font-size: 13px;
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0;
+  }
+  .row.sel {
+    background: #000;
+    color: #fff;
+  }
+  .row .val {
+    font-size: 12px;
+    color: #666;
+    flex-shrink: 0;
+  }
+  .row.sel .val { color: #bbb; }
+  .row .name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 8px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ SCREEN 1: Font tab selected ============ -->
+<div>
+  <div class="label">Font (selected)</div>
+  <div class="screen">
+    <div class="hdr">
+      <div class="hdr-title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="hdr-sub">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <div class="split">
+      <div class="side">
+        <div class="side-item active">
+          <div class="side-icon">Aa</div>
+          <div class="side-label">Font</div>
+        </div>
+        <div class="side-item">
+          <div class="side-icon">◐</div>
+          <div class="side-label">Display</div>
+        </div>
+        <div class="side-item">
+          <div class="side-icon">⇥</div>
+          <div class="side-label">Navigate</div>
+        </div>
+        <div class="side-item">
+          <div class="side-icon">⚙</div>
+          <div class="side-label">Tools</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="content-hdr">Font</div>
+        <div class="row sel">
+          <span class="name">Font Family</span>
+          <span class="val">Cloud Loop</span>
+        </div>
+        <div class="row">
+          <span class="name">Font Size</span>
+          <span class="val">16</span>
+        </div>
+        <div class="row">
+          <span class="name">Line Spacing</span>
+          <span class="val">Wide</span>
+        </div>
+        <div class="row">
+          <span class="name">Paragraph Align</span>
+          <span class="val">Justified</span>
+        </div>
+        <div class="row">
+          <span class="name">Embedded Style</span>
+          <span class="val">ON</span>
+        </div>
+        <div class="row">
+          <span class="name">Hyphenation</span>
+          <span class="val">OFF</span>
+        </div>
+        <div class="row">
+          <span class="name">Anti-aliasing</span>
+          <span class="val">ON</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">Select</div>
+      <div class="h">◀ Tab</div>
+      <div class="h">Tab ▶</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 2: Display tab selected ============ -->
+<div>
+  <div class="label">Display (Side ▶ pressed)</div>
+  <div class="screen">
+    <div class="hdr">
+      <div class="hdr-title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="hdr-sub">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <div class="split">
+      <div class="side">
+        <div class="side-item">
+          <div class="side-icon">Aa</div>
+          <div class="side-label">Font</div>
+        </div>
+        <div class="side-item active">
+          <div class="side-icon">◐</div>
+          <div class="side-label">Display</div>
+        </div>
+        <div class="side-item">
+          <div class="side-icon">⇥</div>
+          <div class="side-label">Navigate</div>
+        </div>
+        <div class="side-item">
+          <div class="side-icon">⚙</div>
+          <div class="side-label">Tools</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="content-hdr">Display</div>
+        <div class="row sel">
+          <span class="name">Screen Margin</span>
+          <span class="val">35</span>
+        </div>
+        <div class="row">
+          <span class="name">Dark Mode</span>
+          <span class="val">ON</span>
+        </div>
+        <div class="row">
+          <span class="name">Orientation</span>
+          <span class="val">Portrait</span>
+        </div>
+        <div class="row">
+          <span class="name">Status Bar</span>
+          <span class="val">Customise ›</span>
+        </div>
+        <div class="row">
+          <span class="name">Refresh Freq</span>
+          <span class="val">15 pages</span>
+        </div>
+        <div class="row">
+          <span class="name">Fading Fix</span>
+          <span class="val">OFF</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">Select</div>
+      <div class="h">◀ Tab</div>
+      <div class="h">Tab ▶</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 3: Navigate tab ============ -->
+<div>
+  <div class="label">Navigate (Side ▶ pressed)</div>
+  <div class="screen">
+    <div class="hdr">
+      <div class="hdr-title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="hdr-sub">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <div class="split">
+      <div class="side">
+        <div class="side-item">
+          <div class="side-icon">Aa</div>
+          <div class="side-label">Font</div>
+        </div>
+        <div class="side-item">
+          <div class="side-icon">◐</div>
+          <div class="side-label">Display</div>
+        </div>
+        <div class="side-item active">
+          <div class="side-icon">⇥</div>
+          <div class="side-label">Navigate</div>
+        </div>
+        <div class="side-item">
+          <div class="side-icon">⚙</div>
+          <div class="side-label">Tools</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="content-hdr">Navigate</div>
+        <div class="row sel">
+          <span class="name">Select Chapter</span>
+          <span class="val">›</span>
+        </div>
+        <div class="row">
+          <span class="name">Go to %</span>
+          <span class="val">36%</span>
+        </div>
+        <div class="row">
+          <span class="name">Auto Turn</span>
+          <span class="val">OFF</span>
+        </div>
+        <div class="row">
+          <span class="name">Footnotes</span>
+          <span class="val">›</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">Select</div>
+      <div class="h">◀ Tab</div>
+      <div class="h">Tab ▶</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 4: Tools tab ============ -->
+<div>
+  <div class="label">Tools (Side ▶ pressed)</div>
+  <div class="screen">
+    <div class="hdr">
+      <div class="hdr-title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="hdr-sub">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <div class="split">
+      <div class="side">
+        <div class="side-item">
+          <div class="side-icon">Aa</div>
+          <div class="side-label">Font</div>
+        </div>
+        <div class="side-item">
+          <div class="side-icon">◐</div>
+          <div class="side-label">Display</div>
+        </div>
+        <div class="side-item">
+          <div class="side-icon">⇥</div>
+          <div class="side-label">Navigate</div>
+        </div>
+        <div class="side-item active">
+          <div class="side-icon">⚙</div>
+          <div class="side-label">Tools</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="content-hdr">Tools</div>
+        <div class="row sel">
+          <span class="name">Screenshot</span>
+          <span class="val"></span>
+        </div>
+        <div class="row">
+          <span class="name">Show Page as QR</span>
+          <span class="val"></span>
+        </div>
+        <div class="row">
+          <span class="name">Sync Progress</span>
+          <span class="val"></span>
+        </div>
+        <div class="row">
+          <span class="name">Delete Book Cache</span>
+          <span class="val"></span>
+        </div>
+        <div class="row">
+          <span class="name">Go Home</span>
+          <span class="val"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">Select</div>
+      <div class="h">◀ Tab</div>
+      <div class="h">Tab ▶</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

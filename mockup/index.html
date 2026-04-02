@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrossPoint Modern Theme - Stacked Covers</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #2a2a2a;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 30px;
+    gap: 50px;
+    flex-wrap: wrap;
+    font-family: system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+  }
+  .label {
+    color: #aaa;
+    font-size: 14px;
+    text-align: center;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .sublabel {
+    color: #666;
+    font-size: 11px;
+    text-align: center;
+    margin-top: 8px;
+    max-width: 240px;
+    line-height: 1.4;
+  }
+  .screen-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* E-paper device frame - 480x800 at 50% scale = 240x400 */
+  .device {
+    width: 240px;
+    height: 400px;
+    background: #f0ede6;
+    border-radius: 8px;
+    border: 2px solid #888;
+    overflow: hidden;
+    position: relative;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  /* E-paper 4-level grayscale */
+  /* White: #f0ede6 | LightGray: #c8c4bc | DarkGray: #7a7670 | Black: #1a1a1a */
+
+  /* ========== STATUS BAR ========== */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 10px;
+    font-size: 5.5px;
+    color: #1a1a1a;
+    height: 14px;
+  }
+  .batt {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .batt-icon {
+    width: 11px;
+    height: 5.5px;
+    border: 0.7px solid #1a1a1a;
+    border-radius: 1px;
+    position: relative;
+    display: inline-block;
+  }
+  .batt-icon::after {
+    content: '';
+    position: absolute;
+    right: -2px;
+    top: 0.8px;
+    width: 1.2px;
+    height: 3px;
+    background: #1a1a1a;
+    border-radius: 0 0.5px 0.5px 0;
+  }
+  .batt-fill {
+    position: absolute;
+    left: 0.7px; top: 0.7px; bottom: 0.7px;
+    width: 78%;
+    background: #1a1a1a;
+    border-radius: 0.5px;
+  }
+
+  /* ========== STACKED COVER CAROUSEL ========== */
+  .carousel {
+    position: relative;
+    height: 200px;
+    margin: 6px 0 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .carousel .cover {
+    position: absolute;
+    border: 0.8px solid #7a7670;
+    border-radius: 3px;
+    overflow: hidden;
+    background: #c8c4bc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+  }
+  .carousel .cover svg, .carousel .cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Center cover - large, prominent */
+  .carousel .cover.center {
+    width: 90px;
+    height: 130px;
+    z-index: 10;
+    border: 1.5px solid #1a1a1a;
+    box-shadow: 2px 2px 0 #c8c4bc;
+  }
+
+  /* Side covers - smaller, behind, faded */
+  .carousel .cover.left {
+    width: 70px;
+    height: 100px;
+    left: 18px;
+    z-index: 5;
+    opacity: 0.55;
+    border-color: #c8c4bc;
+  }
+  .carousel .cover.right {
+    width: 70px;
+    height: 100px;
+    right: 18px;
+    z-index: 5;
+    opacity: 0.55;
+    border-color: #c8c4bc;
+  }
+
+  /* Far side covers - smallest, most faded */
+  .carousel .cover.far-left {
+    width: 50px;
+    height: 75px;
+    left: 0px;
+    z-index: 2;
+    opacity: 0.25;
+    border-color: #c8c4bc;
+  }
+  .carousel .cover.far-right {
+    width: 50px;
+    height: 75px;
+    right: 0px;
+    z-index: 2;
+    opacity: 0.25;
+    border-color: #c8c4bc;
+  }
+
+  /* Book info below carousel */
+  .book-meta {
+    text-align: center;
+    padding: 6px 20px 0;
+  }
+  .book-meta .title {
+    font-size: 8.5px;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1.3;
+  }
+  .book-meta .author {
+    font-size: 5.5px;
+    color: #7a7670;
+    margin-top: 2px;
+  }
+  .book-meta .progress-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 5px;
+    justify-content: center;
+  }
+  .book-meta .progress-bar {
+    flex: 1;
+    max-width: 120px;
+    height: 2.5px;
+    background: #c8c4bc;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .book-meta .progress-fill {
+    height: 100%;
+    background: #1a1a1a;
+    border-radius: 2px;
+  }
+  .book-meta .progress-text {
+    font-size: 5px;
+    color: #7a7670;
+    white-space: nowrap;
+  }
+
+  /* Dot indicators */
+  .dots {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .dots .dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #c8c4bc;
+  }
+  .dots .dot.active {
+    background: #1a1a1a;
+    width: 8px;
+    border-radius: 2px;
+  }
+
+  /* ========== SEPARATOR ========== */
+  .divider {
+    height: 0.5px;
+    background: #c8c4bc;
+    margin: 8px 14px;
+  }
+
+  /* ========== MENU GRID 2x2 ========== */
+  .menu-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+    padding: 0 14px;
+  }
+  .menu-grid .menu-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 8px 4px;
+    border: 0.5px solid #c8c4bc;
+    border-radius: 5px;
+    font-size: 6px;
+    color: #1a1a1a;
+    background: #f0ede6;
+  }
+  .menu-grid .menu-btn .m-icon {
+    width: 14px;
+    height: 14px;
+  }
+  .menu-grid .menu-btn.selected {
+    background: #1a1a1a;
+    color: #f0ede6;
+    border-color: #1a1a1a;
+  }
+
+  /* ========== BUTTON HINTS (bottom front) ========== */
+  .btn-hints {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 8px;
+    gap: 3px;
+    border-top: 0.5px solid #c8c4bc;
+    background: #f0ede6;
+  }
+  .btn-hints .btn {
+    font-size: 5px;
+    padding: 2.5px 5px;
+    border: 0.5px solid #1a1a1a;
+    border-radius: 3px;
+    color: #1a1a1a;
+    text-align: center;
+    flex: 1;
+  }
+
+  /* ========== SIDE BUTTON HINTS ========== */
+  .side-hints {
+    position: absolute;
+    right: -28px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 20;
+  }
+  .side-hints .side-btn {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 5px;
+    padding: 5px 3px;
+    border: 0.7px solid #888;
+    border-radius: 3px;
+    color: #666;
+    background: #e0ddd6;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+
+  /* Device wrapper needs space for side buttons */
+  .device-frame {
+    position: relative;
+    margin-right: 30px;
+  }
+
+  /* ========== SETTINGS ========== */
+  .settings .header {
+    padding: 5px 14px;
+    border-bottom: 0.5px solid #1a1a1a;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 24px;
+  }
+  .settings .header .title { font-size: 10px; font-weight: 700; }
+  .settings .header .ver { font-size: 5px; color: #7a7670; }
+  .settings .tab-bar {
+    display: flex;
+    padding: 4px 10px;
+    gap: 3px;
+    border-bottom: 0.5px solid #c8c4bc;
+  }
+  .settings .tab {
+    font-size: 5.5px;
+    padding: 2.5px 6px;
+    border-radius: 10px;
+    color: #1a1a1a;
+  }
+  .settings .tab.active {
+    background: #1a1a1a;
+    color: #f0ede6;
+  }
+  .settings .setting-list { padding: 0 14px; }
+  .settings .setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 0.5px solid #ddd8d0;
+    font-size: 5.5px;
+  }
+  .settings .setting-row .s-val { color: #7a7670; }
+  .settings .setting-row.selected {
+    margin: 0 -8px; padding: 6px 8px;
+    background: #7a7670;
+    border-radius: 4px;
+    border-bottom-color: transparent;
+    color: #f0ede6;
+  }
+  .settings .setting-row.selected .s-val { color: #f0ede6; }
+
+  /* ========== FILE BROWSER ========== */
+  .browser .header {
+    padding: 5px 14px;
+    border-bottom: 0.5px solid #1a1a1a;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 24px;
+  }
+  .browser .header .title { font-size: 10px; font-weight: 700; }
+  .browser .file-list { padding: 0 14px; }
+  .browser .file-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 0;
+    border-bottom: 0.5px solid #ddd8d0;
+  }
+  .browser .file-row .f-icon { width: 10px; height: 10px; flex-shrink: 0; }
+  .browser .file-row .f-name { font-size: 6px; color: #1a1a1a; }
+  .browser .file-row .f-sub { font-size: 4.5px; color: #7a7670; margin-top: 1px; }
+  .browser .file-row.selected {
+    margin: 0 -8px; padding: 6px 8px;
+    background: #7a7670;
+    border-radius: 4px;
+    border-bottom-color: transparent;
+  }
+  .browser .file-row.selected .f-name,
+  .browser .file-row.selected .f-sub { color: #f0ede6; }
+</style>
+</head>
+<body>
+
+<!-- ===== HOME SCREEN: COVER FOCUS ===== -->
+<div class="screen-wrapper">
+  <div class="label">Home - Cover Focus</div>
+  <div class="device-frame">
+  <div class="side-hints">
+    <div class="side-btn">&uarr; Up</div>
+    <div class="side-btn">&darr; Down</div>
+  </div>
+  <div class="device">
+    <div class="status-bar">
+      <span>18-Mar-2026</span>
+      <span>18:06</span>
+      <span class="batt">88% <span class="batt-icon"><span class="batt-fill"></span></span></span>
+    </div>
+
+    <!-- Stacked Cover Carousel -->
+    <div class="carousel">
+      <!-- Far left -->
+      <div class="cover far-left">
+        <svg viewBox="0 0 70 100"><rect width="70" height="100" fill="#c8c4bc"/><rect x="10" y="10" width="50" height="55" fill="#a8a49c" rx="2"/><rect x="14" y="72" width="42" height="3" fill="#a8a49c" rx="1"/><rect x="18" y="80" width="34" height="3" fill="#a8a49c" rx="1"/></svg>
+      </div>
+      <!-- Left -->
+      <div class="cover left">
+        <svg viewBox="0 0 70 100"><rect width="70" height="100" fill="#ddd8d0"/><rect x="8" y="8" width="54" height="58" fill="#a8a49c" rx="2"/><text x="35" y="80" text-anchor="middle" font-size="7" fill="#7a7670">Overlord</text><text x="35" y="90" text-anchor="middle" font-size="5" fill="#a8a49c">Vol.14</text></svg>
+      </div>
+      <!-- CENTER - Active book -->
+      <div class="cover center">
+        <svg viewBox="0 0 90 130"><rect width="90" height="130" fill="#e8e4dc"/><rect x="6" y="6" width="78" height="85" fill="#7a7670" rx="3"/><text x="45" y="50" text-anchor="middle" font-size="9" fill="#f0ede6" font-weight="bold">Release</text><text x="45" y="62" text-anchor="middle" font-size="9" fill="#f0ede6" font-weight="bold">of the</text><text x="45" y="74" text-anchor="middle" font-size="9" fill="#f0ede6" font-weight="bold">Witch</text><rect x="12" y="98" width="66" height="3" fill="#7a7670" rx="1"/><text x="45" y="113" text-anchor="middle" font-size="6" fill="#7a7670">Er Mu</text><rect x="20" y="120" width="50" height="3" fill="#c8c4bc" rx="1"/></svg>
+      </div>
+      <!-- Right -->
+      <div class="cover right">
+        <svg viewBox="0 0 70 100"><rect width="70" height="100" fill="#ddd8d0"/><rect x="8" y="8" width="54" height="58" fill="#a8a49c" rx="2"/><text x="35" y="80" text-anchor="middle" font-size="5.5" fill="#7a7670">Reincarnated</text><text x="35" y="89" text-anchor="middle" font-size="5.5" fill="#7a7670">as a Slime</text></svg>
+      </div>
+      <!-- Far right -->
+      <div class="cover far-right">
+        <svg viewBox="0 0 70 100"><rect width="70" height="100" fill="#c8c4bc"/><rect x="10" y="10" width="50" height="55" fill="#a8a49c" rx="2"/><rect x="14" y="72" width="42" height="3" fill="#a8a49c" rx="1"/><rect x="18" y="80" width="34" height="3" fill="#a8a49c" rx="1"/></svg>
+      </div>
+    </div>
+
+    <!-- Book info -->
+    <div class="book-meta">
+      <div class="title">Release of the Witch</div>
+      <div class="author">Er Mu</div>
+      <div class="progress-row">
+        <div class="progress-bar"><div class="progress-fill" style="width:65%"></div></div>
+        <div class="progress-text">65%</div>
+      </div>
+    </div>
+
+    <div class="dots">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot active"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- 2x2 Menu Grid -->
+    <div class="menu-grid">
+      <div class="menu-btn selected">
+        <svg class="m-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+        <span>Browse Files</span>
+      </div>
+      <div class="menu-btn">
+        <svg class="m-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+        <span>Recent Books</span>
+      </div>
+      <div class="menu-btn">
+        <svg class="m-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+        <span>File Transfer</span>
+      </div>
+      <div class="menu-btn">
+        <svg class="m-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        <span>Settings</span>
+      </div>
+    </div>
+
+    <div class="btn-hints">
+      <div class="btn">&#8635; Refresh</div>
+      <div class="btn">Select</div>
+      <div class="btn">&larr;</div>
+      <div class="btn">&rarr;</div>
+    </div>
+  </div>
+  </div>
+  <div class="sublabel">ปุ่มล่าง: &larr; &rarr; เลื่อนปกหนังสือ<br>ปุ่มข้าง: &uarr; &darr; เลื่อนไปเมนู<br>Refresh = เคลียร์โกสจอ</div>
+</div>
+
+<!-- ===== HOME SCREEN: MENU FOCUS ===== -->
+<div class="screen-wrapper">
+  <div class="label">Home - Menu Focus</div>
+  <div class="device-frame">
+  <div class="side-hints">
+    <div class="side-btn">&uarr; Up</div>
+    <div class="side-btn">&darr; Down</div>
+  </div>
+  <div class="device">
+    <div class="status-bar">
+      <span>18-Mar-2026</span>
+      <span>18:06</span>
+      <span class="batt">88% <span class="batt-icon"><span class="batt-fill"></span></span></span>
+    </div>
+
+    <div class="carousel">
+      <div class="cover far-left">
+        <svg viewBox="0 0 70 100"><rect width="70" height="100" fill="#c8c4bc"/><rect x="10" y="10" width="50" height="55" fill="#a8a49c" rx="2"/></svg>
+      </div>
+      <div class="cover left">
+        <svg viewBox="0 0 70 100"><rect width="70" height="100" fill="#ddd8d0"/><rect x="8" y="8" width="54" height="58" fill="#a8a49c" rx="2"/><text x="35" y="80" text-anchor="middle" font-size="7" fill="#7a7670">Overlord</text></svg>
+      </div>
+      <div class="cover center">
+        <svg viewBox="0 0 90 130"><rect width="90" height="130" fill="#e8e4dc"/><rect x="6" y="6" width="78" height="85" fill="#7a7670" rx="3"/><text x="45" y="50" text-anchor="middle" font-size="9" fill="#f0ede6" font-weight="bold">Release</text><text x="45" y="62" text-anchor="middle" font-size="9" fill="#f0ede6" font-weight="bold">of the</text><text x="45" y="74" text-anchor="middle" font-size="9" fill="#f0ede6" font-weight="bold">Witch</text><rect x="12" y="98" width="66" height="3" fill="#7a7670" rx="1"/><text x="45" y="113" text-anchor="middle" font-size="6" fill="#7a7670">Er Mu</text></svg>
+      </div>
+      <div class="cover right">
+        <svg viewBox="0 0 70 100"><rect width="70" height="100" fill="#ddd8d0"/><rect x="8" y="8" width="54" height="58" fill="#a8a49c" rx="2"/><text x="35" y="80" text-anchor="middle" font-size="5.5" fill="#7a7670">Slime</text></svg>
+      </div>
+      <div class="cover far-right">
+        <svg viewBox="0 0 70 100"><rect width="70" height="100" fill="#c8c4bc"/><rect x="10" y="10" width="50" height="55" fill="#a8a49c" rx="2"/></svg>
+      </div>
+    </div>
+
+    <div class="book-meta">
+      <div class="title">Release of the Witch</div>
+      <div class="author">Er Mu</div>
+      <div class="progress-row">
+        <div class="progress-bar"><div class="progress-fill" style="width:65%"></div></div>
+        <div class="progress-text">65%</div>
+      </div>
+    </div>
+
+    <div class="dots">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot active"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Menu with File Transfer selected -->
+    <div class="menu-grid">
+      <div class="menu-btn">
+        <svg class="m-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+        <span>Browse Files</span>
+      </div>
+      <div class="menu-btn">
+        <svg class="m-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+        <span>Recent Books</span>
+      </div>
+      <div class="menu-btn selected">
+        <svg class="m-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+        <span>File Transfer</span>
+      </div>
+      <div class="menu-btn">
+        <svg class="m-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        <span>Settings</span>
+      </div>
+    </div>
+
+    <div class="btn-hints">
+      <div class="btn">&#8635; Refresh</div>
+      <div class="btn">Select</div>
+      <div class="btn">&larr;</div>
+      <div class="btn">&rarr;</div>
+    </div>
+  </div>
+  </div>
+  <div class="sublabel">เมื่อ focus อยู่ที่เมนู<br>ปุ่มข้าง &uarr;&darr; เลือกเมนู<br>ปุ่มล่าง &larr;&rarr; เลือกซ้าย/ขวา</div>
+</div>
+
+<!-- ===== SETTINGS ===== -->
+<div class="screen-wrapper">
+  <div class="label">Settings</div>
+  <div class="device-frame">
+  <div class="side-hints">
+    <div class="side-btn">&uarr; Up</div>
+    <div class="side-btn">&darr; Down</div>
+  </div>
+  <div class="device settings">
+    <div class="header">
+      <span class="title">Settings</span>
+      <span class="ver">v1.2.0-modern</span>
+    </div>
+    <div class="tab-bar">
+      <span class="tab active">Display</span>
+      <span class="tab">Reader</span>
+      <span class="tab">Controls</span>
+      <span class="tab">System</span>
+    </div>
+    <div class="setting-list">
+      <div class="setting-row"><span>Sleep Screen</span><span class="s-val">Custom</span></div>
+      <div class="setting-row"><span>Cover Mode</span><span class="s-val">Fit</span></div>
+      <div class="setting-row"><span>Cover Filter</span><span class="s-val">None</span></div>
+      <div class="setting-row"><span>Hide Battery %</span><span class="s-val">Never</span></div>
+      <div class="setting-row selected"><span>UI Theme</span><span class="s-val">Modern</span></div>
+      <div class="setting-row"><span>Refresh Rate</span><span class="s-val">10 pages</span></div>
+      <div class="setting-row"><span>Clock Format</span><span class="s-val">24hr</span></div>
+      <div class="setting-row"><span>Sunlight Fix</span><span class="s-val">ON</span></div>
+    </div>
+    <div class="btn-hints">
+      <div class="btn">&#8635; Refresh</div>
+      <div class="btn">&lt; Back</div>
+      <div class="btn">Toggle</div>
+      <div class="btn">&rarr;</div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- ===== FILE BROWSER ===== -->
+<div class="screen-wrapper">
+  <div class="label">File Browser</div>
+  <div class="device-frame">
+  <div class="side-hints">
+    <div class="side-btn">&uarr; Up</div>
+    <div class="side-btn">&darr; Down</div>
+  </div>
+  <div class="device browser">
+    <div class="header">
+      <span class="title">Browse Files</span>
+      <span style="font-size:5px;color:#7a7670">88%</span>
+    </div>
+    <div class="file-list">
+      <div class="file-row">
+        <svg class="f-icon" viewBox="0 0 24 24" fill="#1a1a1a" width="10" height="10"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+        <div><div class="f-name">Light Novels</div><div class="f-sub">12 items</div></div>
+      </div>
+      <div class="file-row">
+        <svg class="f-icon" viewBox="0 0 24 24" fill="#1a1a1a" width="10" height="10"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+        <div><div class="f-name">Manga</div><div class="f-sub">8 items</div></div>
+      </div>
+      <div class="file-row selected">
+        <svg class="f-icon" viewBox="0 0 24 24" fill="currentColor" width="10" height="10"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>
+        <div><div class="f-name">Release of the Witch.epub</div><div class="f-sub">Er Mu &middot; 4.2 MB</div></div>
+      </div>
+      <div class="file-row">
+        <svg class="f-icon" viewBox="0 0 24 24" fill="#1a1a1a" width="10" height="10"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>
+        <div><div class="f-name">That Time I Got Reincarnated...</div><div class="f-sub">Fuse &middot; 3.8 MB</div></div>
+      </div>
+      <div class="file-row">
+        <svg class="f-icon" viewBox="0 0 24 24" fill="#1a1a1a" width="10" height="10"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>
+        <div><div class="f-name">Overlord Vol.14.epub</div><div class="f-sub">Kugane Maruyama &middot; 5.1 MB</div></div>
+      </div>
+      <div class="file-row">
+        <svg class="f-icon" viewBox="0 0 24 24" fill="#1a1a1a" width="10" height="10"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>
+        <div><div class="f-name">Sword Art Online Vol.1.epub</div><div class="f-sub">Reki Kawahara &middot; 2.9 MB</div></div>
+      </div>
+      <div class="file-row">
+        <svg class="f-icon" viewBox="0 0 24 24" fill="#1a1a1a" width="10" height="10"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+        <div><div class="f-name">notes.txt</div><div class="f-sub">0.1 KB</div></div>
+      </div>
+    </div>
+    <div class="btn-hints">
+      <div class="btn">&#8635; Refresh</div>
+      <div class="btn">&lt; Back</div>
+      <div class="btn">Open</div>
+      <div class="btn">&rarr;</div>
+    </div>
+  </div>
+  </div>
+</div>
+
+</body>
+</html>

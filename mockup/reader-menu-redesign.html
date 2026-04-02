@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reader Menu Redesign — 3 Options</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #e8e8e8;
+    font-family: 'Noto Sans Thai Looped', sans-serif;
+    padding: 30px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 40px;
+    justify-content: center;
+  }
+
+  .option-label {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: #333;
+  }
+  .option-desc {
+    text-align: center;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 16px;
+    max-width: 480px;
+  }
+
+  /* E-ink device frame */
+  .device {
+    width: 480px;
+    height: 800px;
+    background: #fff;
+    border: 2px solid #999;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+
+  /* Bottom button bar (shared) */
+  .button-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    display: flex;
+    border-top: 2px solid #000;
+    background: #fff;
+  }
+  .button-bar .btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-family: 'Noto Sans Thai Looped', sans-serif;
+    border-right: 1px solid #000;
+  }
+  .button-bar .btn:last-child { border-right: none; }
+
+  /* ============================================================
+     OPTION A — Categorized Sections with Collapsible Groups
+     ============================================================ */
+  .opt-a .header {
+    padding: 12px 16px 8px;
+    text-align: center;
+    border-bottom: 1px solid #ccc;
+  }
+  .opt-a .header .title {
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .opt-a .header .progress {
+    font-size: 12px;
+    color: #555;
+    margin-top: 2px;
+  }
+
+  .opt-a .scroll-area {
+    height: 700px;
+    overflow-y: auto;
+    padding-bottom: 10px;
+  }
+
+  .opt-a .category-header {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 12px 20px 4px;
+    color: #555;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .opt-a .menu-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 20px;
+    font-size: 14px;
+    border-bottom: 1px solid #eee;
+  }
+  .opt-a .menu-item.selected {
+    background: #000;
+    color: #fff;
+  }
+  .opt-a .menu-item .value {
+    font-size: 13px;
+    color: #666;
+  }
+  .opt-a .menu-item.selected .value {
+    color: #ccc;
+  }
+
+  /* ============================================================
+     OPTION B — Tab Navigation with Paged Sections
+     ============================================================ */
+  .opt-b .header {
+    padding: 10px 16px 6px;
+    text-align: center;
+    border-bottom: 1px solid #ccc;
+  }
+  .opt-b .header .title {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .opt-b .header .progress {
+    font-size: 11px;
+    color: #555;
+    margin-top: 2px;
+  }
+
+  .opt-b .tab-bar {
+    display: flex;
+    border-bottom: 2px solid #000;
+  }
+  .opt-b .tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 4px;
+    font-size: 12px;
+    font-weight: 400;
+    border-right: 1px solid #ccc;
+    cursor: pointer;
+    position: relative;
+  }
+  .opt-b .tab:last-child { border-right: none; }
+  .opt-b .tab.active {
+    font-weight: 700;
+    background: #000;
+    color: #fff;
+  }
+
+  .opt-b .tab-content {
+    height: 650px;
+    overflow-y: auto;
+    padding-bottom: 10px;
+  }
+
+  .opt-b .menu-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    font-size: 14px;
+    border-bottom: 1px solid #eee;
+  }
+  .opt-b .menu-item.selected {
+    background: #000;
+    color: #fff;
+  }
+  .opt-b .menu-item .value {
+    font-size: 13px;
+    color: #666;
+  }
+  .opt-b .menu-item.selected .value {
+    color: #ccc;
+  }
+
+  /* Quick setting row */
+  .opt-b .quick-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 2px solid #ddd;
+  }
+  .opt-b .quick-row .label {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .opt-b .quick-controls {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .opt-b .quick-btn {
+    width: 36px;
+    height: 36px;
+    border: 2px solid #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    background: #fff;
+  }
+  .opt-b .quick-val {
+    font-size: 16px;
+    font-weight: 700;
+    min-width: 32px;
+    text-align: center;
+  }
+
+  /* ============================================================
+     OPTION C — Quick Settings Bar + Compact List
+     ============================================================ */
+  .opt-c .header {
+    padding: 10px 16px 6px;
+    text-align: center;
+    border-bottom: 1px solid #ccc;
+  }
+  .opt-c .header .title {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .opt-c .header .progress {
+    font-size: 11px;
+    color: #555;
+    margin-top: 2px;
+  }
+
+  .opt-c .quick-settings {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-bottom: 2px solid #000;
+  }
+  .opt-c .qs-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 4px;
+    border-right: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+    cursor: pointer;
+  }
+  .opt-c .qs-item:nth-child(4n) { border-right: none; }
+  .opt-c .qs-item:nth-child(n+5) { border-bottom: none; }
+  .opt-c .qs-item.active {
+    background: #000;
+    color: #fff;
+  }
+
+  .opt-c .qs-icon {
+    font-size: 22px;
+    margin-bottom: 3px;
+    line-height: 1;
+  }
+  .opt-c .qs-label {
+    font-size: 9px;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .opt-c .qs-value {
+    font-size: 10px;
+    font-weight: 700;
+    margin-top: 1px;
+  }
+
+  .opt-c .scroll-area {
+    height: 548px;
+    overflow-y: auto;
+  }
+
+  .opt-c .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 10px 20px 4px;
+    color: #555;
+  }
+
+  .opt-c .menu-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    font-size: 14px;
+    border-bottom: 1px solid #eee;
+  }
+  .opt-c .menu-item.selected {
+    background: #000;
+    color: #fff;
+  }
+  .opt-c .menu-item .value {
+    font-size: 13px;
+    color: #666;
+  }
+  .opt-c .menu-item.selected .value {
+    color: #ccc;
+  }
+
+  /* Toggle pill style */
+  .toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .toggle-track {
+    width: 36px;
+    height: 18px;
+    border: 2px solid #000;
+    border-radius: 9px;
+    position: relative;
+  }
+  .toggle-track .knob {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #000;
+    position: absolute;
+    top: 1px;
+    left: 2px;
+  }
+  .toggle-track.on .knob {
+    left: auto;
+    right: 2px;
+    background: #000;
+  }
+  .selected .toggle-track {
+    border-color: #fff;
+  }
+  .selected .toggle-track .knob {
+    background: #fff;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== OPTION A ===================== -->
+<div>
+  <div class="option-label">Option A — Categorized Sections</div>
+  <div class="option-desc">
+    Group menu items by category (Font, Display, Navigation, Tools)
+    with section headers. Scrollable single list. Cleaner separation.
+  </div>
+  <div class="device opt-a">
+    <div class="header">
+      <div class="title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="progress">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <div class="scroll-area">
+      <div class="category-header">Font</div>
+      <div class="menu-item">
+        <span>Font Family</span>
+        <span class="value">Cloud Loop</span>
+      </div>
+      <div class="menu-item">
+        <span>Font Size</span>
+        <span class="value">16</span>
+      </div>
+      <div class="menu-item">
+        <span>Line Spacing</span>
+        <span class="value">Wide</span>
+      </div>
+
+      <div class="category-header">Display</div>
+      <div class="menu-item">
+        <span>Screen Margin</span>
+        <span class="value">35</span>
+      </div>
+      <div class="menu-item">
+        <span>Orientation</span>
+        <span class="value">Portrait</span>
+      </div>
+      <div class="menu-item selected">
+        <span>Dark Mode</span>
+        <span class="value">
+          <span class="toggle">
+            <span class="toggle-track on"><span class="knob"></span></span>
+          </span>
+        </span>
+      </div>
+      <div class="menu-item">
+        <span>Status Bar</span>
+        <span class="value">Customise ›</span>
+      </div>
+
+      <div class="category-header">Navigation</div>
+      <div class="menu-item">
+        <span>Select Chapter</span>
+        <span class="value">›</span>
+      </div>
+      <div class="menu-item">
+        <span>Go to %</span>
+        <span class="value">36%</span>
+      </div>
+      <div class="menu-item">
+        <span>Auto Turn</span>
+        <span class="value">OFF</span>
+      </div>
+
+      <div class="category-header">Tools</div>
+      <div class="menu-item">
+        <span>Take Screenshot</span>
+        <span class="value"></span>
+      </div>
+      <div class="menu-item">
+        <span>Show Page as QR</span>
+        <span class="value"></span>
+      </div>
+      <div class="menu-item">
+        <span>Sync Progress</span>
+        <span class="value"></span>
+      </div>
+      <div class="menu-item">
+        <span>Delete Book Cache</span>
+        <span class="value"></span>
+      </div>
+      <div class="menu-item">
+        <span>Go Home</span>
+        <span class="value"></span>
+      </div>
+    </div>
+
+    <div class="button-bar">
+      <div class="btn">« Back</div>
+      <div class="btn">Select</div>
+      <div class="btn">Up</div>
+      <div class="btn">Down</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== OPTION B ===================== -->
+<div>
+  <div class="option-label">Option B — Tab Navigation</div>
+  <div class="option-desc">
+    Tab bar at top to switch between pages. Font size has +/- quick
+    controls at the top of the "Font" tab. Fewer items per view.
+  </div>
+  <div class="device opt-b">
+    <div class="header">
+      <div class="title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="progress">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab active">Font</div>
+      <div class="tab">Display</div>
+      <div class="tab">Navigate</div>
+      <div class="tab">Tools</div>
+    </div>
+
+    <div class="tab-content">
+      <!-- Quick font size control -->
+      <div class="quick-row">
+        <span class="label">Font Size</span>
+        <div class="quick-controls">
+          <div class="quick-btn">−</div>
+          <span class="quick-val">16</span>
+          <div class="quick-btn">+</div>
+        </div>
+      </div>
+
+      <div class="quick-row">
+        <span class="label">Margin</span>
+        <div class="quick-controls">
+          <div class="quick-btn">−</div>
+          <span class="quick-val">35</span>
+          <div class="quick-btn">+</div>
+        </div>
+      </div>
+
+      <div style="border-bottom: 1px solid #ddd;"></div>
+
+      <div class="menu-item">
+        <span>Font Family</span>
+        <span class="value">Cloud Loop</span>
+      </div>
+      <div class="menu-item selected">
+        <span>Line Spacing</span>
+        <span class="value">Wide</span>
+      </div>
+      <div class="menu-item">
+        <span>Paragraph Alignment</span>
+        <span class="value">Justified</span>
+      </div>
+      <div class="menu-item">
+        <span>Embedded Style</span>
+        <span class="value">
+          <span class="toggle">
+            <span class="toggle-track on"><span class="knob"></span></span>
+          </span>
+        </span>
+      </div>
+      <div class="menu-item">
+        <span>Hyphenation</span>
+        <span class="value">
+          <span class="toggle">
+            <span class="toggle-track"><span class="knob"></span></span>
+          </span>
+        </span>
+      </div>
+      <div class="menu-item">
+        <span>Anti-aliasing</span>
+        <span class="value">
+          <span class="toggle">
+            <span class="toggle-track on"><span class="knob"></span></span>
+          </span>
+        </span>
+      </div>
+    </div>
+
+    <div class="button-bar">
+      <div class="btn">« Back</div>
+      <div class="btn">Select</div>
+      <div class="btn">‹ Tab</div>
+      <div class="btn">Tab ›</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== OPTION C ===================== -->
+<div>
+  <div class="option-label">Option C — Quick Settings Grid + List</div>
+  <div class="option-desc">
+    Top grid shows frequently used settings (font size, margin, dark mode, orientation)
+    as tappable tiles. Less-used actions in compact list below.
+  </div>
+  <div class="device opt-c">
+    <div class="header">
+      <div class="title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="progress">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <div class="quick-settings">
+      <div class="qs-item">
+        <div class="qs-icon">Aa</div>
+        <div class="qs-label">Font</div>
+        <div class="qs-value">Cloud Loop</div>
+      </div>
+      <div class="qs-item">
+        <div class="qs-icon" style="font-weight:700">16</div>
+        <div class="qs-label">Size</div>
+        <div class="qs-value">▼ ▲</div>
+      </div>
+      <div class="qs-item">
+        <div class="qs-icon">≡</div>
+        <div class="qs-label">Spacing</div>
+        <div class="qs-value">Wide</div>
+      </div>
+      <div class="qs-item">
+        <div class="qs-icon">⇲</div>
+        <div class="qs-label">Margin</div>
+        <div class="qs-value">35</div>
+      </div>
+      <div class="qs-item active">
+        <div class="qs-icon">◐</div>
+        <div class="qs-label">Dark Mode</div>
+        <div class="qs-value">ON</div>
+      </div>
+      <div class="qs-item">
+        <div class="qs-icon">↕</div>
+        <div class="qs-label">Orientation</div>
+        <div class="qs-value">Portrait</div>
+      </div>
+      <div class="qs-item">
+        <div class="qs-icon">⏱</div>
+        <div class="qs-label">Auto Turn</div>
+        <div class="qs-value">OFF</div>
+      </div>
+      <div class="qs-item">
+        <div class="qs-icon">▤</div>
+        <div class="qs-label">Status Bar</div>
+        <div class="qs-value">Custom</div>
+      </div>
+    </div>
+
+    <div class="scroll-area">
+      <div class="section-title">Actions</div>
+      <div class="menu-item">
+        <span>Select Chapter</span>
+        <span class="value">›</span>
+      </div>
+      <div class="menu-item">
+        <span>Go to %</span>
+        <span class="value">36%</span>
+      </div>
+      <div class="menu-item">
+        <span>Take Screenshot</span>
+        <span class="value"></span>
+      </div>
+      <div class="menu-item">
+        <span>Show Page as QR</span>
+        <span class="value"></span>
+      </div>
+      <div class="menu-item">
+        <span>Sync Progress</span>
+        <span class="value"></span>
+      </div>
+
+      <div class="section-title">System</div>
+      <div class="menu-item">
+        <span>Delete Book Cache</span>
+        <span class="value"></span>
+      </div>
+      <div class="menu-item">
+        <span>Go Home</span>
+        <span class="value"></span>
+      </div>
+    </div>
+
+    <div class="button-bar">
+      <div class="btn">« Back</div>
+      <div class="btn">Select</div>
+      <div class="btn">Up</div>
+      <div class="btn">Down</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reader Menu Redesign v3 — More Options</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #e0e0e0;
+    font-family: 'Noto Sans Thai Looped', sans-serif;
+    padding: 30px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 50px;
+    justify-content: center;
+  }
+
+  .option-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .option-label {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #222;
+  }
+  .option-desc {
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 14px;
+    max-width: 480px;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .option-desc b { color: #000; }
+  .nav-hint {
+    margin-top: 10px;
+    font-size: 11px;
+    color: #777;
+    max-width: 480px;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .nav-hint code {
+    background: #d0d0d0;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+  }
+
+  .device {
+    width: 480px;
+    height: 800px;
+    background: #fff;
+    border: 2px solid #888;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  }
+
+  .button-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 40px;
+    display: flex;
+    border-top: 2px solid #000;
+    background: #fff;
+  }
+  .button-bar .btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-family: 'Noto Sans Thai Looped', sans-serif;
+    border-right: 1px solid #000;
+  }
+  .button-bar .btn:last-child { border-right: none; }
+  .button-bar .btn.hl { font-weight: 700; }
+
+  .menu-header {
+    padding: 10px 16px 6px;
+    text-align: center;
+    border-bottom: 1px solid #ccc;
+  }
+  .menu-header .title {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .menu-header .progress {
+    font-size: 11px;
+    color: #555;
+    margin-top: 1px;
+  }
+
+  /* ============================================================
+     C4 — Accordion: expand/collapse in-place
+     ============================================================ */
+  .c4 .scroll { height: 714px; overflow-y: auto; }
+
+  .c4 .acc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    border-bottom: 2px solid #ccc;
+    background: #f5f5f5;
+  }
+  .c4 .acc-header.sel {
+    background: #000;
+    color: #fff;
+    border-bottom-color: #000;
+  }
+  .c4 .acc-header .arrow { font-size: 12px; }
+  .c4 .acc-header .summary {
+    font-weight: 400;
+    font-size: 12px;
+    color: #888;
+  }
+  .c4 .acc-header.sel .summary { color: #aaa; }
+
+  .c4 .acc-body {
+    border-bottom: 2px solid #ccc;
+  }
+  .c4 .acc-body.collapsed { display: none; }
+
+  .c4 .mi {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px 10px 36px;
+    font-size: 13px;
+    border-bottom: 1px solid #eee;
+  }
+  .c4 .mi.sel {
+    background: #000;
+    color: #fff;
+  }
+  .c4 .mi .v {
+    font-size: 12px;
+    color: #666;
+  }
+  .c4 .mi.sel .v { color: #ccc; }
+
+  /* ============================================================
+     C5 — Dashboard: all values at a glance, select to edit
+     ============================================================ */
+  .c5 .dash-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .c5 .dash-cell {
+    padding: 12px 14px;
+    border-right: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    min-height: 68px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .c5 .dash-cell:nth-child(2n) { border-right: none; }
+  .c5 .dash-cell.sel {
+    background: #000;
+    color: #fff;
+  }
+  .c5 .dash-label {
+    font-size: 10px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+  }
+  .c5 .dash-cell.sel .dash-label { color: #aaa; }
+  .c5 .dash-value {
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .c5 .dash-cell.sel .dash-value { color: #fff; }
+  .c5 .dash-hint {
+    font-size: 9px;
+    color: #aaa;
+    margin-top: 1px;
+  }
+  .c5 .dash-cell.sel .dash-hint { color: #888; }
+
+  .c5 .section-sep {
+    border-bottom: 2px solid #000;
+  }
+
+  .c5 .bottom-list { overflow-y: auto; }
+  .c5 .list-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 20px 4px;
+    color: #888;
+  }
+  .c5 .mi {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 20px;
+    font-size: 13px;
+    border-bottom: 1px solid #eee;
+  }
+  .c5 .mi.sel { background: #000; color: #fff; }
+  .c5 .mi .v { font-size: 12px; color: #666; }
+  .c5 .mi.sel .v { color: #ccc; }
+
+  /* ============================================================
+     C6 — Sidebar + Content split
+     ============================================================ */
+  .c6 .split {
+    display: flex;
+    height: 714px;
+  }
+  .c6 .sidebar {
+    width: 130px;
+    border-right: 2px solid #000;
+    background: #f8f8f8;
+    flex-shrink: 0;
+  }
+  .c6 .sidebar-item {
+    padding: 16px 12px;
+    font-size: 12px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 3px;
+  }
+  .c6 .sidebar-item.active {
+    background: #000;
+    color: #fff;
+    font-weight: 700;
+  }
+  .c6 .sidebar-icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+  .c6 .sidebar-label {
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .c6 .content {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .c6 .content-title {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 12px 16px 8px;
+    border-bottom: 1px solid #ddd;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #555;
+  }
+  .c6 .mi {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid #eee;
+  }
+  .c6 .mi.sel { background: #000; color: #fff; }
+  .c6 .mi .v { font-size: 12px; color: #666; }
+  .c6 .mi.sel .v { color: #ccc; }
+</style>
+</head>
+<body>
+
+<!-- ==================== C4 — Accordion ==================== -->
+<div class="option-wrap">
+  <div class="option-label">C4 — Accordion</div>
+  <div class="option-desc">
+    หมวดเป็นแถบที่ <b>กาง/หุบ</b> ได้ กด <b>Select</b> บนหมวดเพื่อเปิด/ปิด<br>
+    เปิดได้ทีละหมวด — หมวดที่เหลือหุบอยู่ เห็นแค่ชื่อ+ค่าสรุป ไม่กินพื้นที่
+  </div>
+  <div class="device c4">
+    <div class="menu-header">
+      <div class="title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="progress">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <div class="scroll">
+      <!-- Font: COLLAPSED -->
+      <div class="acc-header">
+        <span>▶ Font</span>
+        <span class="summary">Cloud Loop · 16 · Wide</span>
+      </div>
+      <div class="acc-body collapsed"></div>
+
+      <!-- Display: EXPANDED (selected) -->
+      <div class="acc-header sel">
+        <span>▼ Display</span>
+        <span class="arrow"></span>
+      </div>
+      <div class="acc-body">
+        <div class="mi">
+          <span>Screen Margin</span>
+          <span class="v">35</span>
+        </div>
+        <div class="mi sel">
+          <span>Dark Mode</span>
+          <span class="v">ON</span>
+        </div>
+        <div class="mi">
+          <span>Orientation</span>
+          <span class="v">Portrait</span>
+        </div>
+        <div class="mi">
+          <span>Status Bar</span>
+          <span class="v">Customise ›</span>
+        </div>
+      </div>
+
+      <!-- Navigate: COLLAPSED -->
+      <div class="acc-header">
+        <span>▶ Navigate</span>
+        <span class="summary">Ch 2/22 · 36%</span>
+      </div>
+      <div class="acc-body collapsed"></div>
+
+      <!-- Tools: COLLAPSED -->
+      <div class="acc-header">
+        <span>▶ Tools</span>
+        <span class="summary">Screenshot · QR · Sync</span>
+      </div>
+      <div class="acc-body collapsed"></div>
+    </div>
+
+    <div class="button-bar">
+      <div class="btn">« Back</div>
+      <div class="btn hl">Select</div>
+      <div class="btn">Up</div>
+      <div class="btn">Down</div>
+    </div>
+  </div>
+  <div class="nav-hint">
+    <code>▲▼</code> เลื่อนระหว่างหมวดและรายการ → <code>Select</code> บนหัวหมวดเพื่อกาง/หุบ<br>
+    หมวดที่หุบแสดงค่าสรุปไว้ (เช่น "Cloud Loop · 16 · Wide") เห็นทุกอย่างในจอเดียว<br>
+    ไม่ต้องจำว่าอยู่หมวดไหน — เพราะเห็นทุกหมวดตลอด
+  </div>
+</div>
+
+<!-- ==================== C5 — Dashboard ==================== -->
+<div class="option-wrap">
+  <div class="option-label">C5 — Dashboard</div>
+  <div class="option-desc">
+    แสดงค่าทุกตั้งค่าหลักเป็นตาราง ดูค่าปัจจุบันได้ทันที<br>
+    <b>▲ ▼</b> เลื่อนเลือกช่อง → <b>Select</b> เปลี่ยนค่า, Actions อยู่ด้านล่าง
+  </div>
+  <div class="device c5">
+    <div class="menu-header">
+      <div class="title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="progress">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <div class="dash-grid">
+      <div class="dash-cell">
+        <div class="dash-label">Font</div>
+        <div class="dash-value">Cloud Loop</div>
+      </div>
+      <div class="dash-cell">
+        <div class="dash-label">Size</div>
+        <div class="dash-value">16</div>
+        <div class="dash-hint">12 · 14 · 16 · 18 · 20</div>
+      </div>
+      <div class="dash-cell">
+        <div class="dash-label">Spacing</div>
+        <div class="dash-value">Wide</div>
+      </div>
+      <div class="dash-cell">
+        <div class="dash-label">Margin</div>
+        <div class="dash-value">35</div>
+        <div class="dash-hint">5 – 40</div>
+      </div>
+      <div class="dash-cell sel">
+        <div class="dash-label">Dark Mode</div>
+        <div class="dash-value">ON</div>
+      </div>
+      <div class="dash-cell">
+        <div class="dash-label">Orientation</div>
+        <div class="dash-value">Portrait</div>
+      </div>
+      <div class="dash-cell">
+        <div class="dash-label">Auto Turn</div>
+        <div class="dash-value">OFF</div>
+      </div>
+      <div class="dash-cell">
+        <div class="dash-label">Anti-alias</div>
+        <div class="dash-value">ON</div>
+      </div>
+    </div>
+
+    <div class="section-sep"></div>
+
+    <div class="bottom-list">
+      <div class="list-title">Actions</div>
+      <div class="mi">
+        <span>Select Chapter</span>
+        <span class="v">2/22 ›</span>
+      </div>
+      <div class="mi">
+        <span>Go to %</span>
+        <span class="v">36%</span>
+      </div>
+      <div class="mi">
+        <span>Status Bar</span>
+        <span class="v">Customise ›</span>
+      </div>
+      <div class="mi">
+        <span>Screenshot</span>
+        <span class="v"></span>
+      </div>
+      <div class="mi">
+        <span>Show Page as QR</span>
+        <span class="v"></span>
+      </div>
+      <div class="mi">
+        <span>Sync Progress</span>
+        <span class="v"></span>
+      </div>
+      <div class="mi">
+        <span>Delete Book Cache</span>
+        <span class="v"></span>
+      </div>
+      <div class="mi">
+        <span>Go Home</span>
+        <span class="v"></span>
+      </div>
+    </div>
+
+    <div class="button-bar">
+      <div class="btn">« Back</div>
+      <div class="btn hl">Select</div>
+      <div class="btn">Up</div>
+      <div class="btn">Down</div>
+    </div>
+  </div>
+  <div class="nav-hint">
+    <code>▲▼</code> เลื่อนเลือกช่อง (ซ้าย→ขวา, บน→ล่าง) → <code>Select</code> สลับค่า<br>
+    เห็นค่าปัจจุบันทุกตัวพร้อมกันโดยไม่ต้องกดเข้าไปดู<br>
+    เหมาะสำหรับปรับค่าเร็วๆ หลายตัวในคราวเดียว
+  </div>
+</div>
+
+<!-- ==================== C6 — Sidebar Split ==================== -->
+<div class="option-wrap">
+  <div class="option-label">C6 — Sidebar Split</div>
+  <div class="option-desc">
+    แบ่งจอเป็น 2 ฝั่ง — ซ้ายเป็นหมวด, ขวาเป็นรายการ<br>
+    <b>◀ ▶ (Side)</b> สลับหมวดซ้าย, <b>▲ ▼</b> เลื่อนรายการขวา
+  </div>
+  <div class="device c6">
+    <div class="menu-header">
+      <div class="title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="progress">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <div class="split">
+      <div class="sidebar">
+        <div class="sidebar-item">
+          <div class="sidebar-icon">Aa</div>
+          <div class="sidebar-label">Font</div>
+        </div>
+        <div class="sidebar-item active">
+          <div class="sidebar-icon">◐</div>
+          <div class="sidebar-label">Display</div>
+        </div>
+        <div class="sidebar-item">
+          <div class="sidebar-icon">☰</div>
+          <div class="sidebar-label">Navigate</div>
+        </div>
+        <div class="sidebar-item">
+          <div class="sidebar-icon">⚙</div>
+          <div class="sidebar-label">Tools</div>
+        </div>
+        <div class="sidebar-item">
+          <div class="sidebar-icon">⏻</div>
+          <div class="sidebar-label">Go Home</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="content-title">Display</div>
+        <div class="mi">
+          <span>Screen Margin</span>
+          <span class="v">35</span>
+        </div>
+        <div class="mi sel">
+          <span>Dark Mode</span>
+          <span class="v">ON</span>
+        </div>
+        <div class="mi">
+          <span>Orientation</span>
+          <span class="v">Portrait</span>
+        </div>
+        <div class="mi">
+          <span>Status Bar</span>
+          <span class="v">Customise ›</span>
+        </div>
+        <div class="mi">
+          <span>Fading Fix</span>
+          <span class="v">OFF</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="button-bar">
+      <div class="btn">« Back</div>
+      <div class="btn hl">Select</div>
+      <div class="btn">◀ Cat</div>
+      <div class="btn">Cat ▶</div>
+    </div>
+  </div>
+  <div class="nav-hint">
+    <code>Side ◀▶</code> สลับหมวดซ้าย (highlight เปลี่ยนทันที) → รายการขวาเปลี่ยนตาม<br>
+    <code>▲▼</code> เลือกรายการในฝั่งขวา → <code>Select</code> เปลี่ยนค่า<br>
+    ข้อดี: เห็นทั้งหมวดและรายการพร้อมกัน รู้ตลอดว่าอยู่ตรงไหน
+  </div>
+</div>
+
+</body>
+</html>

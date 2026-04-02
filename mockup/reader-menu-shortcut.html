@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reader Menu — Button Shortcut Concepts</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #2a2a2a;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 30px;
+    gap: 40px;
+    font-family: 'Noto Sans Thai Looped', sans-serif;
+  }
+
+  .label {
+    text-align: center;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #ccc;
+    font-weight: 700;
+  }
+  .desc {
+    text-align: center;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: #888;
+    max-width: 480px;
+  }
+
+  .screen {
+    width: 480px;
+    height: 800px;
+    background: #fff;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #555;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+
+  /* ── Shared: Button hints bar ── */
+  .hints {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 40px;
+    display: flex;
+    border-top: 2px solid #000;
+  }
+  .hints .h {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    background: #fff;
+    border-right: 1px solid #000;
+  }
+  .hints .h:last-child { border-right: none; }
+  .hints .h.active {
+    background: #000;
+    color: #fff;
+  }
+
+  /* ── Side button indicators ── */
+  .side-btn {
+    position: absolute;
+    right: 0;
+    width: 30px;
+    background: #f0f0f0;
+    border-left: 2px solid #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    letter-spacing: 1px;
+  }
+  .side-btn.top { top: 0; height: 380px; border-bottom: 1px solid #000; }
+  .side-btn.bottom { top: 380px; height: 380px; border-top: 1px solid #000; }
+
+  /* ══════════════════════════════════════════
+     CONCEPT A: Quick Settings HUD
+     All settings visible at once, buttons mapped
+     ══════════════════════════════════════════ */
+
+  .hud-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
+  }
+  .hud-header .title {
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .hud-header .sub {
+    font-size: 10px;
+    color: #666;
+    margin-top: 2px;
+  }
+
+  .hud-grid {
+    padding: 16px 20px;
+  }
+
+  .hud-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid #eee;
+  }
+  .hud-row:last-child { border-bottom: none; }
+
+  .hud-label {
+    font-size: 12px;
+    color: #333;
+  }
+  .hud-value {
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .hud-shortcut {
+    display: inline-block;
+    background: #000;
+    color: #fff;
+    font-size: 8px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  /* Big center area for font size */
+  .font-size-display {
+    text-align: center;
+    padding: 30px 0;
+    border-bottom: 2px solid #000;
+  }
+  .font-size-display .size-label {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 6px;
+  }
+  .font-size-display .size-value {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .font-size-display .size-hint {
+    font-size: 10px;
+    color: #999;
+    margin-top: 8px;
+  }
+  .font-size-display .size-arrows {
+    font-size: 18px;
+    color: #999;
+    margin-top: 4px;
+  }
+
+  /* ══════════════════════════════════════════
+     CONCEPT B: Zoned Layout
+     Screen divided into zones, each with button
+     ══════════════════════════════════════════ */
+
+  .zone-top {
+    height: 120px;
+    border-bottom: 2px solid #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 0 50px;
+  }
+  .zone-top .zt-label { font-size: 10px; color: #888; }
+  .zone-top .zt-font { font-size: 18px; font-weight: 700; margin: 4px 0; }
+  .zone-top .zt-btn { font-size: 9px; color: #666; }
+
+  .zone-middle {
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    border-bottom: 2px solid #000;
+    padding: 0 50px;
+  }
+
+  .zone-settings {
+    padding: 12px 20px 0;
+  }
+  .zone-setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 50px;
+    border-bottom: 1px solid #eee;
+  }
+  .zone-setting-row .zs-label { font-size: 12px; }
+  .zone-setting-row .zs-value { font-size: 12px; font-weight: 700; }
+  .zone-setting-row .zs-key {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #000;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+  .zone-setting-row .zs-left {
+    display: flex;
+    align-items: center;
+  }
+
+  /* ══════════════════════════════════════════
+     CONCEPT C: Carousel/Page Style
+     Swipe-like pages with Left/Right, items with Up/Down
+     ══════════════════════════════════════════ */
+
+  .carousel-header {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #ddd;
+  }
+  .carousel-header .ch-title {
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .carousel-page-indicator {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+  }
+  .carousel-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ddd;
+  }
+  .carousel-dot.active { background: #000; }
+
+  .carousel-page-title {
+    text-align: center;
+    font-size: 10px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 8px 0 4px;
+  }
+
+  .carousel-items {
+    padding: 0 20px;
+  }
+  .carousel-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 52px;
+    border-bottom: 1px solid #eee;
+    padding: 0 10px;
+  }
+  .carousel-item.sel {
+    background: #000;
+    color: #fff;
+    margin: 0 -10px;
+    padding: 0 20px;
+  }
+  .carousel-item .ci-label { font-size: 12px; }
+  .carousel-item .ci-value { font-size: 12px; }
+  .carousel-item.sel .ci-value { color: #bbb; }
+
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════
+     CONCEPT A: Quick Settings HUD — All on One Screen
+     ════════════════════════════════════════════════ -->
+<div>
+  <div class="label">A: Quick Settings HUD</div>
+  <div class="desc">ทุกอย่างอยู่หน้าเดียว ไม่ต้องเลื่อน<br>Up/Down = ขนาดฟอนต์ | Power = เปลี่ยนฟอนต์ | ปุ่มล่าง = เมนูอื่นๆ</div>
+  <div class="screen">
+
+    <div class="hud-header">
+      <div class="title">Release of the Witch 1...</div>
+      <div class="sub">Chapter: 2/22 pages | Book: 36%</div>
+    </div>
+
+    <!-- Font Size — Big center display controlled by Side Up/Down -->
+    <div class="font-size-display">
+      <div class="size-label">FONT SIZE</div>
+      <div class="size-arrows">▲</div>
+      <div class="size-value">16</div>
+      <div class="size-arrows">▼</div>
+      <div class="size-hint">Side buttons Up / Down</div>
+    </div>
+
+    <!-- Font Family — Power button -->
+    <div class="hud-grid">
+      <div class="hud-row">
+        <div>
+          <span class="hud-label">Font Family</span>
+        </div>
+        <div>
+          <span class="hud-value">Cloud Loop</span>
+          <span class="hud-shortcut">POWER</span>
+        </div>
+      </div>
+
+      <div class="hud-row">
+        <div>
+          <span class="hud-label">Line Spacing</span>
+        </div>
+        <div>
+          <span class="hud-value">Wide</span>
+          <span class="hud-shortcut">LEFT</span>
+        </div>
+      </div>
+
+      <div class="hud-row">
+        <div>
+          <span class="hud-label">Screen Margin</span>
+        </div>
+        <div>
+          <span class="hud-value">35</span>
+          <span class="hud-shortcut">RIGHT</span>
+        </div>
+      </div>
+
+      <div class="hud-row">
+        <div>
+          <span class="hud-label">Dark Mode</span>
+        </div>
+        <div>
+          <span class="hud-value">OFF</span>
+          <span class="hud-shortcut">CONFIRM</span>
+        </div>
+      </div>
+
+      <div class="hud-row">
+        <div>
+          <span class="hud-label">Orientation</span>
+        </div>
+        <div>
+          <span class="hud-value">Portrait</span>
+        </div>
+      </div>
+
+      <div class="hud-row">
+        <div>
+          <span class="hud-label">Status Bar</span>
+        </div>
+        <div>
+          <span class="hud-value">Customise ›</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">Dark Mode</div>
+      <div class="h">Spacing</div>
+      <div class="h">Margin</div>
+    </div>
+
+    <!-- Side button labels -->
+    <div class="side-btn top" style="top:50px; height:330px;">SIZE ▲</div>
+    <div class="side-btn bottom" style="top:380px; height:380px;">SIZE ▼</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     CONCEPT B: Zoned Dashboard
+     ════════════════════════════════════════════════ -->
+<div>
+  <div class="label">B: Zoned Dashboard</div>
+  <div class="desc">แบ่งจอเป็นโซน แต่ละโซนผูกกับปุ่ม<br>โซนบน = ฟอนต์ (Power) | โซนกลาง = ขนาด (Up/Down) | โซนล่าง = ตั้งค่าอื่น</div>
+  <div class="screen">
+
+    <!-- Zone 1: Font Family (Power button) -->
+    <div class="zone-top">
+      <div class="zt-label">FONT FAMILY</div>
+      <div class="zt-font">Cloud Loop</div>
+      <div class="zt-btn">Press POWER to change</div>
+    </div>
+
+    <!-- Zone 2: Font Size (Side Up/Down) -->
+    <div class="zone-middle">
+      <div class="size-label" style="font-size:10px; color:#888;">FONT SIZE</div>
+      <div style="display:flex; align-items:center; gap:30px; margin-top:8px;">
+        <span style="font-size:24px; color:#ccc;">◀</span>
+        <span style="font-size:56px; font-weight:700; line-height:1;">16</span>
+        <span style="font-size:24px; color:#ccc;">▶</span>
+      </div>
+      <div class="zt-btn" style="margin-top:8px; font-size:9px; color:#999;">Side buttons ▲ ▼</div>
+    </div>
+
+    <!-- Zone 3: Other settings (Front buttons to select, confirm to toggle) -->
+    <div class="zone-settings">
+      <div class="zone-setting-row">
+        <div class="zs-left">
+          <div class="zs-key">1</div>
+          <span class="zs-label">Line Spacing</span>
+        </div>
+        <span class="zs-value">Wide</span>
+      </div>
+      <div class="zone-setting-row">
+        <div class="zs-left">
+          <div class="zs-key">2</div>
+          <span class="zs-label">Screen Margin</span>
+        </div>
+        <span class="zs-value">35</span>
+      </div>
+      <div class="zone-setting-row">
+        <div class="zs-left">
+          <div class="zs-key">3</div>
+          <span class="zs-label">Dark Mode</span>
+        </div>
+        <span class="zs-value">OFF</span>
+      </div>
+      <div class="zone-setting-row">
+        <div class="zs-left">
+          <div class="zs-key">4</div>
+          <span class="zs-label">Orientation</span>
+        </div>
+        <span class="zs-value">Portrait</span>
+      </div>
+      <div class="zone-setting-row">
+        <div class="zs-left">
+          <div class="zs-key" style="border:none; font-size:7px;">...</div>
+          <span class="zs-label" style="color:#999;">More (Chapter, Go to %, Tools...)</span>
+        </div>
+        <span class="zs-value" style="color:#999;">›</span>
+      </div>
+    </div>
+
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">Toggle</div>
+      <div class="h">◀ Prev</div>
+      <div class="h">Next ▶</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     CONCEPT C: Minimal — Font Control + More
+     ════════════════════════════════════════════════ -->
+<div>
+  <div class="label">C: Minimal Quick Access</div>
+  <div class="desc">หน้าแรกเน้นแค่ Font+Size (ใช้บ่อยสุด)<br>กด Back = กลับอ่าน | กด Confirm = เข้าเมนูเต็ม<br>Power = ฟอนต์ | Up/Down = ขนาด | Left/Right = Spacing</div>
+  <div class="screen">
+
+    <div style="padding:16px; text-align:center; border-bottom:1px solid #ddd;">
+      <div style="font-size:13px; font-weight:700;">Quick Settings</div>
+    </div>
+
+    <!-- Big Font Display -->
+    <div style="text-align:center; padding:40px 0; border-bottom:1px solid #eee;">
+      <div style="font-size:10px; color:#888; letter-spacing:2px; text-transform:uppercase;">Font Family</div>
+      <div style="font-size:22px; font-weight:700; margin:8px 0;">Cloud Loop</div>
+      <div style="font-size:9px; color:#aaa;">Press POWER to cycle</div>
+    </div>
+
+    <div style="text-align:center; padding:50px 0; border-bottom:1px solid #eee;">
+      <div style="font-size:10px; color:#888; letter-spacing:2px; text-transform:uppercase;">Font Size</div>
+      <div style="display:flex; align-items:center; justify-content:center; gap:40px; margin:12px 0;">
+        <span style="font-size:20px; color:#ccc;">▲</span>
+        <span style="font-size:72px; font-weight:700; line-height:1;">16</span>
+        <span style="font-size:20px; color:#ccc;">▼</span>
+      </div>
+      <div style="font-size:9px; color:#aaa;">Side buttons Up / Down</div>
+    </div>
+
+    <div style="display:flex; border-bottom:1px solid #eee;">
+      <div style="flex:1; text-align:center; padding:20px 0; border-right:1px solid #eee;">
+        <div style="font-size:10px; color:#888;">LINE SPACING</div>
+        <div style="font-size:16px; font-weight:700; margin-top:4px;">Wide</div>
+        <div style="font-size:9px; color:#aaa; margin-top:2px;">◀ Left</div>
+      </div>
+      <div style="flex:1; text-align:center; padding:20px 0;">
+        <div style="font-size:10px; color:#888;">MARGIN</div>
+        <div style="font-size:16px; font-weight:700; margin-top:4px;">35</div>
+        <div style="font-size:9px; color:#aaa; margin-top:2px;">Right ▶</div>
+      </div>
+    </div>
+
+    <div style="display:flex; border-bottom:1px solid #eee;">
+      <div style="flex:1; text-align:center; padding:20px 0; border-right:1px solid #eee;">
+        <div style="font-size:10px; color:#888;">DARK MODE</div>
+        <div style="font-size:16px; font-weight:700; margin-top:4px;">OFF</div>
+      </div>
+      <div style="flex:1; text-align:center; padding:20px 0;">
+        <div style="font-size:10px; color:#888;">ORIENTATION</div>
+        <div style="font-size:16px; font-weight:700; margin-top:4px;">Portrait</div>
+      </div>
+    </div>
+
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">More ›</div>
+      <div class="h">Spacing</div>
+      <div class="h">Margin</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     CONCEPT D: Two-Page — Quick + Full Menu
+     ════════════════════════════════════════════════ -->
+<div>
+  <div class="label">D: Two-Page (Quick → Full)</div>
+  <div class="desc">หน้า 1 = Quick shortcut (ไม่ต้องเลื่อน) | กด Confirm = หน้า 2 เมนูเต็ม<br>Power = ฟอนต์ | Up/Down = ขนาด</div>
+  <div class="screen">
+
+    <div style="padding:12px 16px; text-align:center; border-bottom:1px solid #ddd;">
+      <div style="font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Release of the Witch 1...</div>
+      <div style="font-size:10px; color:#666;">Chapter: 2/22 pages | Book: 36%</div>
+    </div>
+
+    <!-- Quick settings grid -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; border-bottom:2px solid #000;">
+      <!-- Font Family -->
+      <div style="padding:20px; border-right:1px solid #ddd; border-bottom:1px solid #ddd; text-align:center;">
+        <div style="font-size:9px; color:#888; text-transform:uppercase; letter-spacing:1px;">Font</div>
+        <div style="font-size:15px; font-weight:700; margin:6px 0;">Cloud Loop</div>
+        <div style="display:inline-block; background:#000; color:#fff; font-size:8px; padding:2px 8px; border-radius:10px;">POWER</div>
+      </div>
+      <!-- Font Size -->
+      <div style="padding:20px; border-bottom:1px solid #ddd; text-align:center;">
+        <div style="font-size:9px; color:#888; text-transform:uppercase; letter-spacing:1px;">Size</div>
+        <div style="font-size:32px; font-weight:700; margin:2px 0; line-height:1;">16</div>
+        <div style="display:inline-block; background:#000; color:#fff; font-size:8px; padding:2px 8px; border-radius:10px;">▲ ▼</div>
+      </div>
+      <!-- Line Spacing -->
+      <div style="padding:20px; border-right:1px solid #ddd; border-bottom:1px solid #ddd; text-align:center;">
+        <div style="font-size:9px; color:#888; text-transform:uppercase; letter-spacing:1px;">Spacing</div>
+        <div style="font-size:15px; font-weight:700; margin:6px 0;">Wide</div>
+        <div style="display:inline-block; background:#000; color:#fff; font-size:8px; padding:2px 8px; border-radius:10px;">LEFT</div>
+      </div>
+      <!-- Margin -->
+      <div style="padding:20px; border-bottom:1px solid #ddd; text-align:center;">
+        <div style="font-size:9px; color:#888; text-transform:uppercase; letter-spacing:1px;">Margin</div>
+        <div style="font-size:15px; font-weight:700; margin:6px 0;">35</div>
+        <div style="display:inline-block; background:#000; color:#fff; font-size:8px; padding:2px 8px; border-radius:10px;">RIGHT</div>
+      </div>
+    </div>
+
+    <!-- Status row -->
+    <div style="padding:12px 20px; display:flex; justify-content:space-between; border-bottom:1px solid #eee;">
+      <span style="font-size:11px;">Dark Mode</span>
+      <span style="font-size:11px; font-weight:700;">OFF</span>
+    </div>
+    <div style="padding:12px 20px; display:flex; justify-content:space-between; border-bottom:1px solid #eee;">
+      <span style="font-size:11px;">Orientation</span>
+      <span style="font-size:11px; font-weight:700;">Portrait</span>
+    </div>
+    <div style="padding:12px 20px; display:flex; justify-content:space-between; border-bottom:1px solid #eee;">
+      <span style="font-size:11px;">Auto Turn</span>
+      <span style="font-size:11px; font-weight:700;">OFF</span>
+    </div>
+
+    <!-- More indicator -->
+    <div style="text-align:center; padding:16px; color:#888; font-size:11px;">
+      Press <b>Select</b> for full menu ›
+    </div>
+
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">More ›</div>
+      <div class="h">Spacing</div>
+      <div class="h">Margin</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

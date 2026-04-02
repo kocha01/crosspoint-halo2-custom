@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Variants 3 — G, H, I</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #d0d0d0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    gap: 30px;
+    flex-wrap: wrap;
+    font-family: 'Noto Sans Thai Looped', sans-serif;
+  }
+
+  .label { text-align: center; margin-bottom: 8px; font-size: 13px; color: #555; font-weight: 700; }
+  .label small { display: block; font-weight: 400; font-size: 11px; color: #777; margin-top: 2px; }
+
+  .screen {
+    width: 480px; height: 800px; background: #fff;
+    position: relative; overflow: hidden;
+    border: 1px solid #aaa; box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  }
+
+  .hdr { height: 50px; padding: 8px 16px 0; text-align: center; border-bottom: 1px solid #bbb; }
+  .hdr-title { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; }
+  .hdr-sub { font-size: 11px; color: #555; line-height: 1.3; }
+
+  .hints { position: absolute; bottom: 0; left: 0; right: 0; height: 40px; display: flex; border-top: 2px solid #000; }
+  .hints .h { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; font-family: 'Noto Sans Thai Looped', sans-serif; background: #fff; border-right: 1px solid #000; }
+  .hints .h:last-child { border-right: none; }
+
+  .split { display: flex; height: 710px; }
+
+  .side { width: 72px; border-right: 2px solid #000; background: #fff; flex-shrink: 0; display: flex; flex-direction: column; align-items: stretch; padding-top: 8px; }
+  .side-item { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 2px; border-bottom: 1px solid #ddd; }
+  .side-item:last-child { border-bottom: none; }
+  .side-item.active { background: #000; color: #fff; }
+  .side-icon { font-size: 18px; line-height: 1; margin-bottom: 2px; }
+  .side-label { font-size: 8px; line-height: 1.2; text-align: center; }
+
+  /* ══════════════════════════════════════════════
+     VARIANT G — Left Accent Bar
+     ══════════════════════════════════════════════ */
+  .vg-content {
+    flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+    padding-top: 6px;
+  }
+  .vg-row {
+    display: flex;
+    align-items: center;
+    height: 44px; min-height: 44px;
+    padding: 0 14px 0 0;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .vg-row .accent {
+    width: 4px;
+    height: 100%;
+    background: transparent;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+  .vg-row.sel .accent {
+    background: #000;
+  }
+  .vg-row .name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .vg-row .val {
+    font-size: 12px;
+    color: #555;
+    flex-shrink: 0;
+    text-align: right;
+    min-width: 70px;
+  }
+  .vg-row.sel {
+    background: #f0f0f0;
+    font-weight: 700;
+  }
+  .vg-sep {
+    height: 1px;
+    background: #e8e8e8;
+    margin: 0 16px 0 16px;
+  }
+  .vg-group-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #aaa;
+    padding: 14px 16px 4px;
+    flex-shrink: 0;
+  }
+
+  /* ══════════════════════════════════════════════
+     VARIANT H — Fullwidth Value Below (Kindle-style)
+     ══════════════════════════════════════════════ */
+  .vh-content {
+    flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+  }
+  .vh-title {
+    font-size: 13px; font-weight: 700;
+    padding: 12px 16px 8px;
+    color: #333;
+    border-bottom: 1px solid #ddd;
+    flex-shrink: 0;
+  }
+  .vh-row {
+    padding: 10px 16px;
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0;
+  }
+  .vh-row.sel {
+    border-left: 4px solid #000;
+    background: #f8f8f8;
+    padding-left: 12px;
+  }
+  .vh-row-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .vh-row-name {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .vh-row-arrow {
+    font-size: 14px;
+    color: #aaa;
+  }
+  .vh-row-desc {
+    font-size: 11px;
+    color: #888;
+    margin-top: 1px;
+  }
+  .vh-row.sel .vh-row-arrow { color: #333; }
+
+  /* ══════════════════════════════════════════════
+     VARIANT I — Minimal Grid Tiles
+     ══════════════════════════════════════════════ */
+  .vi-content {
+    flex: 1; overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .vi-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #aaa;
+    padding: 2px 6px;
+    flex-shrink: 0;
+  }
+  .vi-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .vi-tile {
+    border: 1.5px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    min-height: 56px;
+  }
+  .vi-tile.sel {
+    border-color: #000;
+    background: #000;
+    color: #fff;
+  }
+  .vi-tile.wide {
+    grid-column: span 2;
+  }
+  .vi-tile-name {
+    font-size: 10px;
+    color: #888;
+    line-height: 1.2;
+  }
+  .vi-tile.sel .vi-tile-name { color: #999; }
+  .vi-tile-val {
+    font-size: 15px;
+    font-weight: 700;
+    margin-top: 2px;
+    line-height: 1.3;
+  }
+  .vi-tile-action {
+    font-size: 12px;
+    text-align: center;
+    padding: 8px;
+    border: 1.5px solid #ddd;
+    border-radius: 4px;
+    color: #555;
+  }
+  .vi-tile-action.sel {
+    border-color: #000;
+    background: #000;
+    color: #fff;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ VARIANT G: Left Accent Bar ============ -->
+<div>
+  <div class="label">
+    Variant G — Left Accent Bar
+    <small>Subtle left bar marks selected row, grouped sections</small>
+  </div>
+  <div class="screen">
+    <div class="hdr">
+      <div class="hdr-title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="hdr-sub">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+    <div class="split">
+      <div class="side">
+        <div class="side-item active"><div class="side-icon">Aa</div><div class="side-label">Font</div></div>
+        <div class="side-item"><div class="side-icon">◐</div><div class="side-label">Display</div></div>
+        <div class="side-item"><div class="side-icon">⇥</div><div class="side-label">Navigate</div></div>
+        <div class="side-item"><div class="side-icon">⚙</div><div class="side-label">Tools</div></div>
+      </div>
+      <div class="vg-content">
+        <div class="vg-group-label">Typography</div>
+        <div class="vg-row sel">
+          <div class="accent"></div>
+          <span class="name">Font Family</span>
+          <span class="val">Cloud Loop</span>
+        </div>
+        <div class="vg-sep"></div>
+        <div class="vg-row">
+          <div class="accent"></div>
+          <span class="name">Font Size</span>
+          <span class="val">16</span>
+        </div>
+        <div class="vg-sep"></div>
+        <div class="vg-row">
+          <div class="accent"></div>
+          <span class="name">Line Spacing</span>
+          <span class="val">Wide</span>
+        </div>
+        <div class="vg-group-label">Layout</div>
+        <div class="vg-row">
+          <div class="accent"></div>
+          <span class="name">Paragraph Align</span>
+          <span class="val">Justified</span>
+        </div>
+        <div class="vg-sep"></div>
+        <div class="vg-row">
+          <div class="accent"></div>
+          <span class="name">Hyphenation</span>
+          <span class="val">OFF</span>
+        </div>
+        <div class="vg-group-label">Rendering</div>
+        <div class="vg-row">
+          <div class="accent"></div>
+          <span class="name">Embedded Style</span>
+          <span class="val">ON</span>
+        </div>
+        <div class="vg-sep"></div>
+        <div class="vg-row">
+          <div class="accent"></div>
+          <span class="name">Anti-aliasing</span>
+          <span class="val">ON</span>
+        </div>
+      </div>
+    </div>
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">Select</div>
+      <div class="h">◀ Tab</div>
+      <div class="h">Tab ▶</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VARIANT H: Kindle-style Description ============ -->
+<div>
+  <div class="label">
+    Variant H — Name + Description
+    <small>Each item has title + subtitle description</small>
+  </div>
+  <div class="screen">
+    <div class="hdr">
+      <div class="hdr-title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="hdr-sub">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+    <div class="split">
+      <div class="side">
+        <div class="side-item"><div class="side-icon">Aa</div><div class="side-label">Font</div></div>
+        <div class="side-item active"><div class="side-icon">◐</div><div class="side-label">Display</div></div>
+        <div class="side-item"><div class="side-icon">⇥</div><div class="side-label">Navigate</div></div>
+        <div class="side-item"><div class="side-icon">⚙</div><div class="side-label">Tools</div></div>
+      </div>
+      <div class="vh-content">
+        <div class="vh-title">Display Settings</div>
+        <div class="vh-row sel">
+          <div class="vh-row-top">
+            <span class="vh-row-name">Screen Margin</span>
+            <span class="vh-row-arrow">›</span>
+          </div>
+          <div class="vh-row-desc">Currently: 35 px</div>
+        </div>
+        <div class="vh-row">
+          <div class="vh-row-top">
+            <span class="vh-row-name">Dark Mode</span>
+            <span class="vh-row-arrow">›</span>
+          </div>
+          <div class="vh-row-desc">Currently: ON — Inverted colors</div>
+        </div>
+        <div class="vh-row">
+          <div class="vh-row-top">
+            <span class="vh-row-name">Orientation</span>
+            <span class="vh-row-arrow">›</span>
+          </div>
+          <div class="vh-row-desc">Currently: Portrait</div>
+        </div>
+        <div class="vh-row">
+          <div class="vh-row-top">
+            <span class="vh-row-name">Status Bar</span>
+            <span class="vh-row-arrow">›</span>
+          </div>
+          <div class="vh-row-desc">Choose which items to show</div>
+        </div>
+        <div class="vh-row">
+          <div class="vh-row-top">
+            <span class="vh-row-name">Refresh Frequency</span>
+            <span class="vh-row-arrow">›</span>
+          </div>
+          <div class="vh-row-desc">Currently: Every 15 pages</div>
+        </div>
+        <div class="vh-row">
+          <div class="vh-row-top">
+            <span class="vh-row-name">Fading Fix</span>
+            <span class="vh-row-arrow">›</span>
+          </div>
+          <div class="vh-row-desc">Currently: OFF — Extra refresh cycle</div>
+        </div>
+      </div>
+    </div>
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">Select</div>
+      <div class="h">◀ Tab</div>
+      <div class="h">Tab ▶</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VARIANT I: Grid Tiles ============ -->
+<div>
+  <div class="label">
+    Variant I — Grid Tiles
+    <small>2-column grid for quick glance, actions as buttons</small>
+  </div>
+  <div class="screen">
+    <div class="hdr">
+      <div class="hdr-title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="hdr-sub">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+    <div class="split">
+      <div class="side">
+        <div class="side-item"><div class="side-icon">Aa</div><div class="side-label">Font</div></div>
+        <div class="side-item"><div class="side-icon">◐</div><div class="side-label">Display</div></div>
+        <div class="side-item"><div class="side-icon">⇥</div><div class="side-label">Navigate</div></div>
+        <div class="side-item active"><div class="side-icon">⚙</div><div class="side-label">Tools</div></div>
+      </div>
+      <div class="vi-content">
+        <div class="vi-title">Quick Actions</div>
+        <div class="vi-grid">
+          <div class="vi-tile-action sel">Screenshot</div>
+          <div class="vi-tile-action">Page as QR</div>
+          <div class="vi-tile-action">Sync Progress</div>
+          <div class="vi-tile-action">Go Home</div>
+        </div>
+        <div class="vi-title" style="margin-top: 8px;">Book</div>
+        <div class="vi-grid">
+          <div class="vi-tile wide">
+            <div class="vi-tile-name">Delete Book Cache</div>
+            <div class="vi-tile-val">Clear cached data</div>
+          </div>
+        </div>
+        <div class="vi-title" style="margin-top: 8px;">Reading Stats</div>
+        <div class="vi-grid">
+          <div class="vi-tile">
+            <div class="vi-tile-name">Progress</div>
+            <div class="vi-tile-val">36%</div>
+          </div>
+          <div class="vi-tile">
+            <div class="vi-tile-name">Chapter</div>
+            <div class="vi-tile-val">2 / 22</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">Select</div>
+      <div class="h">◀ Tab</div>
+      <div class="h">Tab ▶</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

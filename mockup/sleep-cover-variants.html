@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Halo 2 Sleep Cover Variants</title>
+<style>
+  :root {
+    --paper: #f1eee6;
+    --paper-edge: #c9c1b2;
+    --screen-line: #1e1e1e;
+    --ink: #161616;
+    --panel: #1f1f1f;
+    --panel-ink: #f5f2eb;
+    --soft: #d9d2c4;
+    --soft-2: #e7e1d6;
+    --glow: #faf7ef;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 24px;
+    font-family: "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+    color: #f5f5f5;
+    background:
+      radial-gradient(circle at top left, #3a3833 0, #22211e 45%, #171614 100%);
+  }
+
+  .page {
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    margin: 0 0 8px;
+    font-size: 28px;
+    line-height: 1.08;
+  }
+
+  .intro {
+    margin: 0 0 24px;
+    max-width: 900px;
+    color: rgba(255, 255, 255, 0.74);
+    line-height: 1.5;
+    font-size: 14px;
+  }
+
+  .variants {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    gap: 22px;
+  }
+
+  .variant {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .label {
+    text-align: center;
+  }
+
+  .label h2 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.1;
+  }
+
+  .label p {
+    margin: 6px 0 0;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 13px;
+    line-height: 1.45;
+    max-width: 310px;
+  }
+
+  .device {
+    width: 360px;
+    height: 600px;
+    background: #efebe2;
+    border-radius: 20px;
+    border: 2px solid var(--paper-edge);
+    box-shadow:
+      0 28px 60px rgba(0, 0, 0, 0.34),
+      inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    padding: 18px;
+    position: relative;
+  }
+
+  .screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 14px;
+    border: 1px solid #c2bbae;
+    overflow: hidden;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.26) 0, rgba(255,255,255,0.04) 100%),
+      var(--paper);
+    position: relative;
+  }
+
+  .battery {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.55);
+    letter-spacing: 0.02em;
+  }
+
+  .cover {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 10px;
+    background: var(--glow);
+    padding: 4px;
+    box-shadow:
+      0 0 0 2px var(--glow),
+      0 0 0 4px var(--screen-line);
+  }
+
+  .cover-art {
+    width: 100%;
+    height: 100%;
+    border-radius: 7px;
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.22);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.12) 0, rgba(0,0,0,0.05) 100%),
+      repeating-linear-gradient(
+        135deg,
+        #ece6d9 0 8px,
+        #ddd5c5 8px 16px,
+        #f4f0e8 16px 24px
+      );
+    position: relative;
+  }
+
+  .cover-art::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 50% 22%, rgba(255,255,255,0.9) 0 18%, transparent 18%),
+      radial-gradient(circle at 48% 40%, rgba(255,255,255,0.55) 0 10%, transparent 10%),
+      radial-gradient(circle at 50% 60%, rgba(0,0,0,0.06) 0 28%, transparent 28%),
+      linear-gradient(180deg, rgba(0,0,0,0.15) 0, transparent 26%),
+      linear-gradient(0deg, rgba(0,0,0,0.14) 0, transparent 34%);
+    mix-blend-mode: multiply;
+  }
+
+  .cover-title {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 18px;
+    color: rgba(20, 20, 20, 0.88);
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.16;
+    font-weight: 700;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+  }
+
+  .panel-dark {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    background: var(--panel);
+    color: var(--panel-ink);
+    border-radius: 12px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .title {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.16;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .meta {
+    margin-top: 8px;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    font-size: 11px;
+    line-height: 1;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.86);
+  }
+
+  .progress {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .bar {
+    flex: 1;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.18);
+    overflow: hidden;
+  }
+
+  .fill {
+    height: 100%;
+    width: 34%;
+    border-radius: 999px;
+    background: #f6f2ea;
+  }
+
+  .percent {
+    min-width: 38px;
+    text-align: right;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .variant-a .cover {
+    top: 24px;
+    width: 236px;
+    height: 344px;
+  }
+
+  .variant-a .panel-dark {
+    bottom: 18px;
+    padding: 12px 14px 12px;
+  }
+
+  .variant-b .cover {
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    transform: none;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .variant-b .overlay-strip {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 18px;
+    border-radius: 10px;
+    background: rgba(245, 242, 235, 0.92);
+    color: var(--ink);
+    padding: 10px 12px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+  }
+
+  .variant-b .cover-art {
+    border-radius: 0;
+    border: none;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.10) 0, rgba(0,0,0,0.14) 100%),
+      radial-gradient(circle at 50% 18%, rgba(255,255,255,0.84) 0 12%, transparent 12%),
+      radial-gradient(circle at 48% 44%, rgba(255,255,255,0.38) 0 10%, transparent 10%),
+      radial-gradient(circle at 50% 62%, rgba(0,0,0,0.07) 0 22%, transparent 22%),
+      repeating-linear-gradient(
+        135deg,
+        #ece6d9 0 8px,
+        #ddd5c5 8px 16px,
+        #f4f0e8 16px 24px
+      );
+  }
+
+  .variant-b .cover-art::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0 62%, rgba(0,0,0,0.26) 100%);
+    pointer-events: none;
+  }
+
+  .variant-b .overlay-strip .title {
+    font-size: 13px;
+  }
+
+  .variant-b .overlay-strip .progress {
+    margin-top: 8px;
+  }
+
+  .variant-b .overlay-strip .bar {
+    background: rgba(0,0,0,0.14);
+  }
+
+  .variant-b .overlay-strip .fill {
+    background: var(--ink);
+  }
+
+  .variant-b .overlay-strip .percent {
+    color: rgba(0,0,0,0.7);
+  }
+
+  .variant-c .cover {
+    top: 24px;
+    width: 248px;
+    height: 360px;
+  }
+
+  .variant-c .panel-dark {
+    bottom: 18px;
+    padding: 10px 14px 14px;
+  }
+
+  .variant-c .split-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 14px;
+    align-items: center;
+  }
+
+  .variant-c .title {
+    text-align: left;
+    font-size: 13px;
+  }
+
+  .variant-c .meta {
+    justify-content: flex-start;
+    margin-top: 6px;
+  }
+
+  .ring {
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    background:
+      conic-gradient(#f6f2ea 0 122deg, rgba(255,255,255,0.12) 122deg 360deg);
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+  }
+
+  .ring::before {
+    content: "";
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--panel);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .ring-label {
+    position: absolute;
+    width: 62px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .footer-hint {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 8px;
+    font-size: 11px;
+    color: rgba(0, 0, 0, 0.42);
+    text-align: center;
+  }
+
+  @media (max-width: 900px) {
+    body {
+      padding: 16px;
+    }
+
+    .variants {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <h1>Sleep Screen Variants</h1>
+    <p class="intro">ลองไว้ 3 แนวครับ อันแรกยังใกล้ Halo 2 เดิมที่สุด, อันที่สองทำให้ปกเด่นสุดและข้อมูลไปซ้อนบนปกแบบเบา ๆ, อันที่สามใช้การ์ดล่างแบบ compact พร้อมวง progress เพื่อให้ดูเป็น sleep card มากขึ้น</p>
+
+    <div class="variants">
+      <section class="variant">
+        <div class="label">
+          <h2>Variant A</h2>
+          <p>แนวปลอดภัยที่สุด ปกเด่นอยู่กลางจอ และใช้การ์ดล่างเล็กลงกว่าของเดิม</p>
+        </div>
+        <div class="device">
+          <div class="screen variant-a">
+            <div class="battery">Sleep</div>
+            <div class="cover">
+              <div class="cover-art">
+                <div class="cover-title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫)</div>
+              </div>
+            </div>
+            <div class="panel-dark">
+              <p class="title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1-1498 (จบ)</p>
+              <div class="meta">
+                <span class="chip">ตอนที่ 544</span>
+                <span class="chip">เอ้อร์มู่ (二目)</span>
+              </div>
+              <div class="progress">
+                <div class="bar"><div class="fill"></div></div>
+                <div class="percent">34%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="variant">
+        <div class="label">
+          <h2>Variant B</h2>
+          <p>เน้นปกสุด ๆ ไม่มีการ์ดล่างแยก ข้อมูลอยู่บนแถบขาวโปร่งที่ซ้อนบนปกโดยตรง</p>
+        </div>
+        <div class="device">
+          <div class="screen variant-b">
+            <div class="cover">
+              <div class="cover-art">
+                <div class="overlay-strip">
+                  <p class="title">ปล่อยแม่มดคนนั้นซะ</p>
+                  <div class="progress">
+                    <div class="bar"><div class="fill"></div></div>
+                    <div class="percent">34%</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="footer-hint">ข้อมูลน้อย แต่ปกเด่นที่สุด</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="variant">
+        <div class="label">
+          <h2>Variant C</h2>
+          <p>แนว compact card ปกใหญ่ด้านบน แล้วสรุปชื่อ/ตอน/ความคืบหน้าในกรอบล่างแบบสมดุลกว่า</p>
+        </div>
+        <div class="device">
+          <div class="screen variant-c">
+            <div class="battery">Sleep</div>
+            <div class="cover">
+              <div class="cover-art">
+                <div class="cover-title">Release That Witch</div>
+              </div>
+            </div>
+            <div class="panel-dark">
+              <div class="split-grid">
+                <div>
+                  <p class="title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1-1498 (จบ)</p>
+                  <div class="meta">
+                    <span class="chip">ตอนที่ 544</span>
+                    <span class="chip">เอ้อร์มู่</span>
+                  </div>
+                </div>
+                <div style="position: relative;">
+                  <div class="ring"></div>
+                  <div class="ring-label">34%</div>
+                </div>
+              </div>
+              <div class="progress">
+                <div class="bar"><div class="fill"></div></div>
+                <div class="percent">ตำแหน่งล่าสุด</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

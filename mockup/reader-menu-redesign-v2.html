@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reader Menu Redesign v2 — Option C Refined</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #e0e0e0;
+    font-family: 'Noto Sans Thai Looped', sans-serif;
+    padding: 30px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 50px;
+    justify-content: center;
+  }
+
+  .option-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .option-label {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #222;
+  }
+  .option-desc {
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 14px;
+    max-width: 480px;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .option-desc b { color: #000; }
+  .nav-hint {
+    margin-top: 10px;
+    font-size: 11px;
+    color: #777;
+    max-width: 480px;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .nav-hint code {
+    background: #d0d0d0;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+  }
+
+  /* E-ink device frame */
+  .device {
+    width: 480px;
+    height: 800px;
+    background: #fff;
+    border: 2px solid #888;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  }
+
+  /* Bottom button bar */
+  .button-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 40px;
+    display: flex;
+    border-top: 2px solid #000;
+    background: #fff;
+  }
+  .button-bar .btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-family: 'Noto Sans Thai Looped', sans-serif;
+    border-right: 1px solid #000;
+  }
+  .button-bar .btn:last-child { border-right: none; }
+  .button-bar .btn.highlight { font-weight: 700; }
+
+  /* Shared header */
+  .menu-header {
+    padding: 10px 16px 6px;
+    text-align: center;
+    border-bottom: 1px solid #ccc;
+  }
+  .menu-header .title {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .menu-header .progress {
+    font-size: 11px;
+    color: #555;
+    margin-top: 1px;
+  }
+
+  /* Shared menu item */
+  .mi {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    font-size: 14px;
+    border-bottom: 1px solid #eee;
+    min-height: 40px;
+  }
+  .mi.sel {
+    background: #000;
+    color: #fff;
+  }
+  .mi .v {
+    font-size: 13px;
+    color: #666;
+    flex-shrink: 0;
+  }
+  .mi.sel .v { color: #ccc; }
+
+  /* ============================================================
+     C1 — Category Strip: ◀ ▶ to switch category, ▲ ▼ for items
+     ============================================================ */
+  .c1 .cat-strip {
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid #000;
+    height: 44px;
+  }
+  .c1 .cat-arrow {
+    width: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: #000;
+    flex-shrink: 0;
+  }
+  .c1 .cat-tabs {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    height: 100%;
+  }
+  .c1 .cat-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    text-align: center;
+    color: #888;
+    position: relative;
+    padding: 0 4px;
+  }
+  .c1 .cat-tab.active {
+    font-weight: 700;
+    color: #000;
+  }
+  .c1 .cat-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 10%;
+    right: 10%;
+    height: 3px;
+    background: #000;
+  }
+
+  .c1 .cat-body {
+    height: 660px;
+    overflow-y: auto;
+  }
+
+  /* ============================================================
+     C2 — Two-Level Hub: first pick a category, then see items
+     ============================================================ */
+  .c2 .hub-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 2px solid #000;
+  }
+  .c2 .hub-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 18px 8px;
+    border-right: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+    min-height: 90px;
+  }
+  .c2 .hub-cell:nth-child(2n) { border-right: none; }
+  .c2 .hub-cell:nth-last-child(-n+2) { border-bottom: none; }
+  .c2 .hub-cell.sel {
+    background: #000;
+    color: #fff;
+  }
+  .c2 .hub-icon {
+    font-size: 28px;
+    margin-bottom: 4px;
+  }
+  .c2 .hub-label {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .c2 .hub-sub {
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .c2 .hub-cell.sel .hub-sub { color: #aaa; }
+
+  .c2 .bottom-actions {
+    overflow-y: auto;
+  }
+  .c2 .act-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 10px 20px 4px;
+    color: #888;
+  }
+
+  /* Sub-screen for C2 */
+  .c2-sub {
+    position: relative;
+  }
+  .c2-sub .sub-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 2px solid #000;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .c2-sub .sub-header .back-arrow {
+    margin-right: 10px;
+    font-size: 18px;
+  }
+  .c2-sub .sub-body {
+    height: 670px;
+    overflow-y: auto;
+  }
+
+  /* ============================================================
+     C3 — Compact Carousel + Action List
+     ============================================================ */
+  .c3 .carousel-area {
+    border-bottom: 2px solid #000;
+    padding: 14px 20px;
+    min-height: 130px;
+  }
+  .c3 .carousel-cat {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .c3 .carousel-cat-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #555;
+  }
+  .c3 .carousel-cat-dots {
+    display: flex;
+    gap: 6px;
+  }
+  .c3 .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 2px solid #000;
+  }
+  .c3 .dot.active { background: #000; }
+
+  .c3 .carousel-items {
+    display: flex;
+    gap: 0;
+  }
+  .c3 .ci {
+    flex: 1;
+    text-align: center;
+    padding: 8px 4px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+  }
+  .c3 .ci.sel {
+    border-color: #000;
+    background: #000;
+    color: #fff;
+  }
+  .c3 .ci-icon {
+    font-size: 22px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .c3 .ci-label {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+  .c3 .ci-value {
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  .c3 .ci.sel .ci-value { color: #ddd; }
+
+  .c3 .action-area {
+    overflow-y: auto;
+  }
+  .c3 .act-divider {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 10px 20px 4px;
+    color: #888;
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== C1 — Category Strip ==================== -->
+<div class="option-wrap">
+  <div class="option-label">C1 — Category Strip</div>
+  <div class="option-desc">
+    แถบหมวดด้านบน ใช้ <b>◀ ▶ (Side)</b> สลับหมวด, <b>▲ ▼</b> เลื่อนรายการในหมวดนั้น<br>
+    แต่ละหมวดมีแค่ 3-5 รายการ — ไม่ต้องเลื่อนเลย
+  </div>
+  <div class="device c1">
+    <div class="menu-header">
+      <div class="title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="progress">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <div class="cat-strip">
+      <div class="cat-arrow">◀</div>
+      <div class="cat-tabs">
+        <div class="cat-tab active">Font</div>
+        <div class="cat-tab">Display</div>
+        <div class="cat-tab">Navigate</div>
+        <div class="cat-tab">Tools</div>
+      </div>
+      <div class="cat-arrow">▶</div>
+    </div>
+
+    <!-- Font tab content (current) -->
+    <div class="cat-body">
+      <div class="mi sel">
+        <span>Font Family</span>
+        <span class="v">Cloud Loop</span>
+      </div>
+      <div class="mi">
+        <span>Font Size</span>
+        <span class="v">16</span>
+      </div>
+      <div class="mi">
+        <span>Line Spacing</span>
+        <span class="v">Wide</span>
+      </div>
+      <div class="mi">
+        <span>Paragraph Alignment</span>
+        <span class="v">Justified</span>
+      </div>
+      <div class="mi">
+        <span>Embedded Style</span>
+        <span class="v">ON</span>
+      </div>
+      <div class="mi">
+        <span>Hyphenation</span>
+        <span class="v">OFF</span>
+      </div>
+      <div class="mi">
+        <span>Anti-aliasing</span>
+        <span class="v">ON</span>
+      </div>
+    </div>
+
+    <div class="button-bar">
+      <div class="btn">« Back</div>
+      <div class="btn highlight">Select</div>
+      <div class="btn">◀ Tab</div>
+      <div class="btn">Tab ▶</div>
+    </div>
+  </div>
+  <div class="nav-hint">
+    <code>Side ◀▶</code> สลับหมวด &nbsp;|&nbsp; <code>▲▼</code> เลื่อนรายการ &nbsp;|&nbsp; <code>Select</code> เปลี่ยนค่า<br>
+    กดปุ่มข้างเครื่อง 1-2 ครั้ง ก็ถึงหมวดที่ต้องการ ไม่ต้องเลื่อนผ่านรายการทั้งหมด
+  </div>
+</div>
+
+<!-- ==================== C2 — Two-Level Hub ==================== -->
+<div class="option-wrap">
+  <div class="option-label">C2 — Two-Level Hub</div>
+  <div class="option-desc">
+    หน้าแรกแสดง 6 กล่องหมวด ใช้ <b>▲ ▼</b> เลือกหมวด → <b>Select</b> เข้าหมวด<br>
+    หมวดย่อยแสดงแค่รายการที่เกี่ยวข้อง กด <b>Back</b> กลับมาเลือกหมวดอื่น
+  </div>
+
+  <!-- Main hub screen -->
+  <div class="device c2" style="margin-bottom: 20px;">
+    <div class="menu-header">
+      <div class="title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="progress">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <div class="hub-grid">
+      <div class="hub-cell sel">
+        <div class="hub-icon">Aa</div>
+        <div class="hub-label">Font</div>
+        <div class="hub-sub">Cloud Loop · 16</div>
+      </div>
+      <div class="hub-cell">
+        <div class="hub-icon">◐</div>
+        <div class="hub-label">Display</div>
+        <div class="hub-sub">Margin 35 · Portrait</div>
+      </div>
+      <div class="hub-cell">
+        <div class="hub-icon">☰</div>
+        <div class="hub-label">Chapter</div>
+        <div class="hub-sub">2/22 pages</div>
+      </div>
+      <div class="hub-cell">
+        <div class="hub-icon">⇥</div>
+        <div class="hub-label">Go to %</div>
+        <div class="hub-sub">36%</div>
+      </div>
+    </div>
+
+    <div class="bottom-actions">
+      <div class="act-title">Quick Actions</div>
+      <div class="mi">
+        <span>Dark Mode</span>
+        <span class="v">ON</span>
+      </div>
+      <div class="mi">
+        <span>Auto Turn</span>
+        <span class="v">OFF</span>
+      </div>
+      <div class="mi">
+        <span>Screenshot</span>
+        <span class="v"></span>
+      </div>
+      <div class="mi">
+        <span>Show Page as QR</span>
+        <span class="v"></span>
+      </div>
+      <div class="mi">
+        <span>Sync Progress</span>
+        <span class="v"></span>
+      </div>
+      <div class="mi">
+        <span>Delete Book Cache</span>
+        <span class="v"></span>
+      </div>
+      <div class="mi">
+        <span>Go Home</span>
+        <span class="v"></span>
+      </div>
+    </div>
+
+    <div class="button-bar">
+      <div class="btn">« Back</div>
+      <div class="btn highlight">Select</div>
+      <div class="btn">Up</div>
+      <div class="btn">Down</div>
+    </div>
+  </div>
+
+  <!-- Sub screen example: Font settings -->
+  <div class="device c2-sub">
+    <div class="menu-header">
+      <div class="title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="progress">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <div class="sub-header">
+      <span class="back-arrow">‹</span>
+      <span>Font Settings</span>
+    </div>
+
+    <div class="sub-body">
+      <div class="mi sel">
+        <span>Font Family</span>
+        <span class="v">Cloud Loop</span>
+      </div>
+      <div class="mi">
+        <span>Font Size</span>
+        <span class="v">16</span>
+      </div>
+      <div class="mi">
+        <span>Line Spacing</span>
+        <span class="v">Wide</span>
+      </div>
+      <div class="mi">
+        <span>Paragraph Alignment</span>
+        <span class="v">Justified</span>
+      </div>
+      <div class="mi">
+        <span>Embedded Style</span>
+        <span class="v">ON</span>
+      </div>
+      <div class="mi">
+        <span>Hyphenation</span>
+        <span class="v">OFF</span>
+      </div>
+      <div class="mi">
+        <span>Anti-aliasing</span>
+        <span class="v">ON</span>
+      </div>
+    </div>
+
+    <div class="button-bar">
+      <div class="btn highlight">« Back</div>
+      <div class="btn">Select</div>
+      <div class="btn">Up</div>
+      <div class="btn">Down</div>
+    </div>
+  </div>
+  <div class="nav-hint">
+    ซ้าย: หน้าหลัก (Hub) — <code>▲▼</code> เลือกหมวด → <code>Select</code> เข้าดูรายการ<br>
+    ขวา: หน้าย่อย (Sub) — <code>▲▼</code> เลื่อนรายการ → <code>Back</code> กลับหน้าหลัก<br>
+    กดแค่ 2 ครั้ง (เลือกหมวด + Select) ก็ถึงตั้งค่าที่ต้องการ
+  </div>
+</div>
+
+<!-- ==================== C3 — Carousel + Actions ==================== -->
+<div class="option-wrap">
+  <div class="option-label">C3 — Carousel Panels</div>
+  <div class="option-desc">
+    ด้านบนแสดงทีละ 1 หมวด (แสดง 3-4 ไอเทม) ใช้ <b>◀ ▶ (Side)</b> เลื่อนหมวด<br>
+    <b>▲ ▼</b> เลือกไอเทมในหมวด, <b>Select</b> เปลี่ยนค่า — กด <b>▼</b> ยาวข้ามไป Actions ด้านล่าง
+  </div>
+  <div class="device c3">
+    <div class="menu-header">
+      <div class="title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="progress">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <!-- Carousel: Display panel -->
+    <div class="carousel-area">
+      <div class="carousel-cat">
+        <div class="carousel-cat-label">◀ &nbsp;Display&nbsp; ▶</div>
+        <div class="carousel-cat-dots">
+          <div class="dot"></div>
+          <div class="dot active"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+      </div>
+      <div class="carousel-items">
+        <div class="ci">
+          <div class="ci-icon">⇲</div>
+          <div class="ci-label">Margin</div>
+          <div class="ci-value">35</div>
+        </div>
+        <div class="ci sel">
+          <div class="ci-icon">◐</div>
+          <div class="ci-label">Dark Mode</div>
+          <div class="ci-value">ON</div>
+        </div>
+        <div class="ci">
+          <div class="ci-icon">↕</div>
+          <div class="ci-label">Orientation</div>
+          <div class="ci-value">Portrait</div>
+        </div>
+        <div class="ci">
+          <div class="ci-icon">▤</div>
+          <div class="ci-label">Status Bar</div>
+          <div class="ci-value">Custom</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions below -->
+    <div class="action-area">
+      <div class="act-divider">Actions</div>
+      <div class="mi">
+        <span>Select Chapter</span>
+        <span class="v">›</span>
+      </div>
+      <div class="mi">
+        <span>Go to %</span>
+        <span class="v">36%</span>
+      </div>
+      <div class="mi">
+        <span>Auto Turn</span>
+        <span class="v">OFF</span>
+      </div>
+      <div class="mi">
+        <span>Screenshot</span>
+        <span class="v"></span>
+      </div>
+      <div class="mi">
+        <span>Show Page as QR</span>
+        <span class="v"></span>
+      </div>
+      <div class="mi">
+        <span>Sync Progress</span>
+        <span class="v"></span>
+      </div>
+      <div class="mi">
+        <span>Delete Book Cache</span>
+        <span class="v"></span>
+      </div>
+      <div class="mi">
+        <span>Go Home</span>
+        <span class="v"></span>
+      </div>
+    </div>
+
+    <div class="button-bar">
+      <div class="btn">« Back</div>
+      <div class="btn highlight">Select</div>
+      <div class="btn">◀ Panel</div>
+      <div class="btn">Panel ▶</div>
+    </div>
+  </div>
+  <div class="nav-hint">
+    <code>Side ◀▶</code> สลับหมวด (Font → Display → Navigate → Tools)<br>
+    <code>▲▼</code> เลือกไอเทมในหมวด + actions ด้านล่าง<br>
+    Dots บอกว่าอยู่หมวดไหน — เข้าถึงทุกตั้งค่าได้ภายใน 1-2 กด
+  </div>
+</div>
+
+</body>
+</html>

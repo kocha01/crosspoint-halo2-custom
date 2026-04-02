@@ -1105,29 +1105,79 @@ CMakeFiles/crosspoint-simulator.dir/main.cpp.o: \
   /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/I18n/I18n.h \
   /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/I18n/I18nKeys.h \
   /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/all.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosans_8_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosans_10_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosans_10_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosans_12_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosans_12_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosans_14_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosans_14_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosans_16_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosans_16_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosans_18_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosans_18_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/cloudloop_8_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/cloudloop_10_regular.h \
   /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/cloudloop_12_regular.h \
   /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/cloudloop_14_regular.h \
   /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/cloudloop_16_regular.h \
   /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/cloudloop_18_regular.h \
   /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/cloudloop_20_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/cloudloop_36_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/bookerly_12_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/bookerly_12_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/bookerly_14_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/bookerly_14_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/bookerly_16_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/bookerly_16_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/bookerly_18_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/bookerly_18_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/bookerly_20_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/bookerly_20_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notoserif_12_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notoserif_12_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notoserif_14_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notoserif_14_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notoserif_16_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notoserif_16_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notoserif_18_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notoserif_18_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notoserif_20_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notoserif_20_bold.h \
   /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosanssc_8_regular.h \
   /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosanssc_10_regular.h \
   /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosanssc_10_bold.h \
   /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosanssc_12_regular.h \
   /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosanssc_12_bold.h \
-  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosansthailooped_8_regular.h \
-  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosansthailooped_10_regular.h \
-  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosansthailooped_10_bold.h \
-  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosansthailooped_12_regular.h \
-  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosansthailooped_12_bold.h \
-  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosansthailooped_14_regular.h \
-  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosansthailooped_14_bold.h \
-  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosansthailooped_16_regular.h \
-  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosansthailooped_16_bold.h \
-  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosansthailooped_18_regular.h \
-  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosansthailooped_18_bold.h \
-  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosansthailooped_20_regular.h \
-  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/notosansthailooped_20_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/baijamjuree_8_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/baijamjuree_10_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/baijamjuree_10_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/baijamjuree_12_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/baijamjuree_12_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/baijamjuree_14_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/baijamjuree_14_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/baijamjuree_16_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/baijamjuree_16_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/baijamjuree_18_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/baijamjuree_18_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/baijamjuree_20_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/baijamjuree_20_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/baijamjuree_36_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/itim_12_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/itim_14_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/itim_16_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/itim_18_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/itim_20_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/mali_12_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/mali_12_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/mali_14_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/mali_14_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/mali_16_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/mali_16_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/mali_18_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/mali_18_bold.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/mali_20_regular.h \
+  /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/EpdFont/builtinFonts/mali_20_bold.h \
   /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../src/CrossPointSettings.h \
   /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../src/CrossPointState.h \
   /Users/nakarinkochapond/Documents/XL\ project/crosspoint-reader-halo-2-ui-ver2/simulator/../lib/KOReaderSync/KOReaderCredentialStore.h \

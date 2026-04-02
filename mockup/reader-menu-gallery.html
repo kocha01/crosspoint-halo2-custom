@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reader Menu — Design Gallery</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a2e;
+    font-family: 'Inter', sans-serif;
+    color: #e0e0e0;
+    padding: 32px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    text-align: center;
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 40px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .card {
+    background: #16213e;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #2a2a4a;
+    transition: border-color 0.2s;
+  }
+
+  .card:hover {
+    border-color: #4a6fa5;
+  }
+
+  .card-header {
+    margin-bottom: 12px;
+  }
+
+  .card-number {
+    display: inline-block;
+    background: #4a6fa5;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+  }
+
+  .card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+
+  .card-desc {
+    font-size: 12px;
+    color: #999;
+    line-height: 1.4;
+  }
+
+  .card iframe {
+    width: 100%;
+    height: 850px;
+    border: 1px solid #2a2a4a;
+    border-radius: 8px;
+    background: #ccc;
+  }
+
+  .open-link {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 12px;
+    color: #4a9fff;
+    text-decoration: none;
+  }
+
+  .open-link:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 900px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+
+<h1>Reader Menu — Design Gallery</h1>
+<p class="subtitle">All mockup variants side by side for comparison. Scroll down to see all 8 designs.</p>
+
+<div class="grid">
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-number">#1</div>
+      <div class="card-title">Reader Menu Redesign — 3 Options</div>
+      <div class="card-desc">Initial redesign exploration with three distinct layout options (A, B, C).</div>
+    </div>
+    <iframe src="reader-menu-redesign.html" loading="lazy"></iframe>
+    <a class="open-link" href="reader-menu-redesign.html" target="_blank">Open full page &rarr;</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-number">#2</div>
+      <div class="card-title">Reader Menu Redesign v2 — Option C Refined</div>
+      <div class="card-desc">Refinement of Option C from the initial redesign, with polished interactions.</div>
+    </div>
+    <iframe src="reader-menu-redesign-v2.html" loading="lazy"></iframe>
+    <a class="open-link" href="reader-menu-redesign-v2.html" target="_blank">Open full page &rarr;</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-number">#3</div>
+      <div class="card-title">Reader Menu Redesign v3 — More Options</div>
+      <div class="card-desc">Extended exploration with additional layout and interaction options.</div>
+    </div>
+    <iframe src="reader-menu-redesign-v3.html" loading="lazy"></iframe>
+    <a class="open-link" href="reader-menu-redesign-v3.html" target="_blank">Open full page &rarr;</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-number">#4</div>
+      <div class="card-title">C6 — Sidebar Split (1:1 Scale, 480x800)</div>
+      <div class="card-desc">Sidebar split layout rendered at true 1:1 pixel scale for the 480x800 display.</div>
+    </div>
+    <iframe src="reader-menu-c6-1to1.html" loading="lazy"></iframe>
+    <a class="open-link" href="reader-menu-c6-1to1.html" target="_blank">Open full page &rarr;</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-number">#5</div>
+      <div class="card-title">Content Area Variants — Same Sidebar</div>
+      <div class="card-desc">Multiple content area designs (A, B, C) sharing the same sidebar component.</div>
+    </div>
+    <iframe src="reader-menu-content-variants.html" loading="lazy"></iframe>
+    <a class="open-link" href="reader-menu-content-variants.html" target="_blank">Open full page &rarr;</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-number">#6</div>
+      <div class="card-title">Content Variants 2 — D, E, F</div>
+      <div class="card-desc">Second batch of content area variants (D, E, F) with different layout approaches.</div>
+    </div>
+    <iframe src="reader-menu-content-variants-2.html" loading="lazy"></iframe>
+    <a class="open-link" href="reader-menu-content-variants-2.html" target="_blank">Open full page &rarr;</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-number">#7</div>
+      <div class="card-title">Content Variants 3 — G, H, I</div>
+      <div class="card-desc">Third batch of content area variants (G, H, I) with further layout explorations.</div>
+    </div>
+    <iframe src="reader-menu-content-variants-3.html" loading="lazy"></iframe>
+    <a class="open-link" href="reader-menu-content-variants-3.html" target="_blank">Open full page &rarr;</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-number">#8</div>
+      <div class="card-title">Toggle Style Refined — B1, B2, B3</div>
+      <div class="card-desc">Refined toggle/switch interaction styles with three sub-variants.</div>
+    </div>
+    <iframe src="reader-menu-toggle-refined.html" loading="lazy"></iframe>
+    <a class="open-link" href="reader-menu-toggle-refined.html" target="_blank">Open full page &rarr;</a>
+  </div>
+
+</div>
+
+</body>
+</html>

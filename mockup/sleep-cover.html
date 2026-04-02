@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Halo 2 Sleep Cover Mockup</title>
+<style>
+  :root {
+    --paper: #f1eee6;
+    --paper-shadow: #d6d1c5;
+    --line: #1d1d1d;
+    --mid: #8f8a80;
+    --soft: #d4cec0;
+    --ink: #111111;
+    --panel: #1d1d1d;
+    --panel-ink: #f5f2eb;
+    --frame: #cfc8bb;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 28px;
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    background:
+      radial-gradient(circle at top left, #3a3833 0, #22211e 45%, #171614 100%);
+    color: #f5f5f5;
+    font-family: "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+  }
+
+  .controls {
+    width: 300px;
+    padding: 18px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  }
+
+  .controls h1 {
+    margin: 0 0 8px;
+    font-size: 24px;
+    line-height: 1.1;
+  }
+
+  .controls p {
+    margin: 0 0 16px;
+    color: rgba(255, 255, 255, 0.72);
+    line-height: 1.5;
+    font-size: 14px;
+  }
+
+  .field {
+    margin-top: 14px;
+  }
+
+  .field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .field input[type="text"],
+  .field input[type="range"],
+  .field select {
+    width: 100%;
+  }
+
+  .field input[type="text"] {
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 14px;
+  }
+
+  .field input[type="range"] {
+    accent-color: #ffffff;
+  }
+
+  .field select {
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 14px;
+  }
+
+  .value-row {
+    margin-top: 4px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.62);
+  }
+
+  .device-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .device-label {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.68);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .device {
+    width: 360px;
+    height: 600px;
+    background: #efebe2;
+    border-radius: 20px;
+    border: 2px solid #b7b0a4;
+    box-shadow:
+      0 28px 60px rgba(0, 0, 0, 0.34),
+      inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    padding: 18px;
+    position: relative;
+  }
+
+  .screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 14px;
+    border: 1px solid #c2bbae;
+    overflow: hidden;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.28) 0, rgba(255,255,255,0.05) 100%),
+      var(--paper);
+    position: relative;
+  }
+
+  .sleep-layout {
+    height: 100%;
+    padding: 10px 16px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .sleep-header {
+    display: block;
+    min-height: 2px;
+  }
+
+  .hero {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .cover-stack {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cover-shadow {
+    position: absolute;
+    inset: 20px 34px 52px 34px;
+    border-radius: 20px;
+    background:
+      radial-gradient(circle at 50% 38%, rgba(0,0,0,0.08) 0, rgba(0,0,0,0.04) 46%, transparent 74%);
+    filter: blur(7px);
+  }
+
+  .cover-card {
+    width: 244px;
+    height: 352px;
+    border-radius: 20px;
+    background: #fbf7ef;
+    padding: 4px;
+    box-shadow:
+      0 0 0 3px #fcfbf7,
+      0 0 0 5px #222,
+      0 14px 26px rgba(0, 0, 0, 0.12);
+    position: relative;
+  }
+
+  .cover-art {
+    width: 100%;
+    height: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.22);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.12) 0, rgba(0,0,0,0.05) 100%),
+      repeating-linear-gradient(
+        135deg,
+        #ece6d9 0 8px,
+        #ddd5c5 8px 16px,
+        #f4f0e8 16px 24px
+      );
+    position: relative;
+  }
+
+  .cover-art::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 50% 22%, rgba(255,255,255,0.9) 0 18%, transparent 18%),
+      radial-gradient(circle at 48% 40%, rgba(255,255,255,0.55) 0 10%, transparent 10%),
+      radial-gradient(circle at 50% 60%, rgba(0,0,0,0.06) 0 28%, transparent 28%),
+      linear-gradient(180deg, rgba(0,0,0,0.15) 0, transparent 26%),
+      linear-gradient(0deg, rgba(0,0,0,0.14) 0, transparent 34%);
+    mix-blend-mode: multiply;
+  }
+
+  .cover-title {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 18px;
+    color: rgba(20, 20, 20, 0.88);
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.18;
+    font-weight: 700;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+  }
+
+  .sleep-panel {
+    border-radius: 20px;
+    background: var(--panel);
+    color: var(--panel-ink);
+    padding: 10px 14px 10px;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.05),
+      0 10px 24px rgba(0,0,0,0.12);
+  }
+
+  .sleep-title {
+    font-size: 14px;
+    line-height: 1.14;
+    font-weight: 700;
+    text-align: center;
+    text-wrap: balance;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .sleep-meta {
+    margin-top: 3px;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 10px;
+    color: rgba(245, 242, 235, 0.76);
+  }
+
+  .progress-shell {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0;
+  }
+
+  .progress-track {
+    flex: 1;
+    height: 9px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.16);
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 34%;
+    border-radius: 999px;
+    background:
+      linear-gradient(90deg, rgba(255,255,255,0.96) 0, rgba(255,255,255,0.82) 100%);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
+  }
+
+  .progress-label {
+    min-width: 42px;
+    text-align: right;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+
+  .chip {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  @media (max-width: 900px) {
+    body {
+      padding: 16px;
+    }
+
+    .device {
+      width: 300px;
+      height: 500px;
+    }
+
+    .cover-card {
+      width: 202px;
+      height: 292px;
+    }
+
+    .sleep-title {
+      font-size: 13px;
+    }
+  }
+</style>
+</head>
+<body>
+  <section class="controls">
+    <h1>Sleep Screen Mockup</h1>
+    <p>แนวทางนี้ใช้ปกเป็นพระเอก แล้ววางชื่อเรื่องกับความคืบหน้าการอ่านไว้ในแผงล่างแบบ Halo 2 เพื่อให้ตอนเครื่องหลับยังดูเหมือนหน้าอ่าน ไม่ใช่แค่ภาพปกเฉย ๆ</p>
+
+    <div class="field">
+      <label for="titleInput">ชื่อเรื่อง</label>
+      <input id="titleInput" type="text" value="ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1-1498 (จบ)">
+    </div>
+
+    <div class="field">
+      <label for="chapterInput">ข้อมูลตอน / ตำแหน่งอ่าน</label>
+      <input id="chapterInput" type="text" value="ตอนที่ 544 • แหล่งกำเนิดพลังงานแบบใหม่">
+    </div>
+
+    <div class="field">
+      <label for="authorInput">ผู้แต่ง / ผู้แปล</label>
+      <input id="authorInput" type="text" value="เอ้อร์มู่ (二目) • แปลไทย">
+    </div>
+
+    <div class="field">
+      <label for="progressInput">Reading progress</label>
+      <input id="progressInput" type="range" min="0" max="100" value="34">
+      <div class="value-row">
+        <span>เริ่มอ่าน</span>
+        <span id="progressReadout">34%</span>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="device-wrap">
+    <div class="device-label">Halo 2 Sleep Cover</div>
+    <div class="device">
+      <div class="screen">
+        <div class="sleep-layout">
+          <div class="sleep-header">
+          </div>
+
+          <div class="hero">
+            <div class="cover-stack">
+              <div class="cover-shadow"></div>
+              <div class="cover-card">
+                <div class="cover-art">
+                  <div class="cover-title" id="coverTitle">ปล่อยแม่มดคนนั้นซะ</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sleep-panel">
+            <div class="sleep-title" id="sleepTitle">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1-1498 (จบ)</div>
+            <div class="sleep-meta">
+              <span class="chip" id="chapterMeta">ตอนที่ 544 • แหล่งกำเนิดพลังงานแบบใหม่</span>
+              <span class="chip" id="authorMeta">เอ้อร์มู่ (二目) • แปลไทย</span>
+            </div>
+
+            <div class="progress-shell">
+              <div class="progress-track">
+                <div class="progress-fill" id="progressFill"></div>
+              </div>
+              <div class="progress-label" id="progressLabel">34%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<script>
+  const titleInput = document.getElementById("titleInput");
+  const chapterInput = document.getElementById("chapterInput");
+  const authorInput = document.getElementById("authorInput");
+  const progressInput = document.getElementById("progressInput");
+
+  const sleepTitle = document.getElementById("sleepTitle");
+  const coverTitle = document.getElementById("coverTitle");
+  const chapterMeta = document.getElementById("chapterMeta");
+  const authorMeta = document.getElementById("authorMeta");
+  const progressFill = document.getElementById("progressFill");
+  const progressLabel = document.getElementById("progressLabel");
+  const progressReadout = document.getElementById("progressReadout");
+
+  function shortenCoverTitle(text) {
+    return text.length > 26 ? text.slice(0, 26).trim() + "..." : text;
+  }
+
+  function sync() {
+    sleepTitle.textContent = titleInput.value || "ไม่มีชื่อเรื่อง";
+    coverTitle.textContent = shortenCoverTitle(titleInput.value || "ไม่มีชื่อเรื่อง");
+    chapterMeta.textContent = chapterInput.value || "ไม่มีข้อมูลตอน";
+    authorMeta.textContent = authorInput.value || "ไม่มีข้อมูลผู้แต่ง";
+
+    const progress = Math.max(0, Math.min(100, Number(progressInput.value || 0)));
+    progressFill.style.width = progress + "%";
+    progressLabel.textContent = progress + "%";
+    progressReadout.textContent = progress + "%";
+  }
+
+  [titleInput, chapterInput, authorInput, progressInput].forEach((element) => {
+    element.addEventListener("input", sync);
+    element.addEventListener("change", sync);
+  });
+
+  sync();
+</script>
+</body>
+</html>

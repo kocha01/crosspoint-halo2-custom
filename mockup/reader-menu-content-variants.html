@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Area Variants — Same Sidebar</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #d0d0d0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    gap: 30px;
+    flex-wrap: wrap;
+    font-family: 'Noto Sans Thai Looped', sans-serif;
+  }
+
+  .label {
+    text-align: center;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: #555;
+    font-weight: 700;
+  }
+  .label small { display: block; font-weight: 400; font-size: 11px; color: #777; margin-top: 2px; }
+
+  .screen {
+    width: 480px;
+    height: 800px;
+    background: #fff;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #aaa;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    image-rendering: pixelated;
+  }
+
+  /* ── Header ── */
+  .hdr {
+    height: 50px;
+    padding: 8px 16px 0;
+    text-align: center;
+    border-bottom: 1px solid #bbb;
+  }
+  .hdr-title { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; }
+  .hdr-sub { font-size: 11px; color: #555; line-height: 1.3; }
+
+  /* ── Hints ── */
+  .hints {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 40px;
+    display: flex;
+    border-top: 2px solid #000;
+  }
+  .hints .h {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-family: 'Noto Sans Thai Looped', sans-serif;
+    background: #fff;
+    border-right: 1px solid #000;
+  }
+  .hints .h:last-child { border-right: none; }
+
+  /* ── Split ── */
+  .split { display: flex; height: 710px; }
+
+  /* ── Sidebar (shared) ── */
+  .side {
+    width: 72px;
+    border-right: 2px solid #000;
+    background: #fff;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding-top: 8px;
+  }
+  .side-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 2px;
+    border-bottom: 1px solid #ddd;
+  }
+  .side-item:last-child { border-bottom: none; }
+  .side-item.active { background: #000; color: #fff; }
+  .side-icon { font-size: 18px; line-height: 1; margin-bottom: 2px; }
+  .side-label { font-size: 8px; line-height: 1.2; text-align: center; }
+
+  /* ══════════════════════════════════════════════
+     VARIANT A — Card Groups
+     ══════════════════════════════════════════════ */
+  .va-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .va-card {
+    border: 1.5px solid #ccc;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .va-card-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #888;
+    padding: 6px 12px;
+    background: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+  }
+  .va-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 38px;
+    padding: 0 12px;
+    font-size: 13px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .va-row:last-child { border-bottom: none; }
+  .va-row.sel {
+    background: #000;
+    color: #fff;
+  }
+  .va-row .val { font-size: 12px; color: #666; }
+  .va-row.sel .val { color: #bbb; }
+
+  /* ══════════════════════════════════════════════
+     VARIANT B — Inline Toggle Style
+     ══════════════════════════════════════════════ */
+  .vb-content {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .vb-section-hdr {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #999;
+    padding: 12px 16px 4px;
+    flex-shrink: 0;
+  }
+  .vb-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 44px;
+    padding: 0 16px;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .vb-row.sel {
+    background: #000;
+    color: #fff;
+  }
+  .vb-row .name { flex: 1; }
+  /* Toggle pill */
+  .vb-toggle {
+    width: 40px;
+    height: 20px;
+    border-radius: 10px;
+    border: 2px solid #999;
+    background: #fff;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .vb-toggle::after {
+    content: '';
+    position: absolute;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #999;
+    top: 2px; left: 3px;
+    transition: 0.2s;
+  }
+  .vb-toggle.on {
+    border-color: #000;
+    background: #000;
+  }
+  .vb-toggle.on::after {
+    background: #fff;
+    left: 21px;
+  }
+  .vb-row.sel .vb-toggle { border-color: #666; }
+  .vb-row.sel .vb-toggle.on { border-color: #fff; background: #fff; }
+  .vb-row.sel .vb-toggle.on::after { background: #000; }
+  /* Value chip */
+  .vb-chip {
+    font-size: 11px;
+    padding: 3px 10px;
+    border: 1.5px solid #ccc;
+    border-radius: 12px;
+    color: #555;
+    flex-shrink: 0;
+  }
+  .vb-row.sel .vb-chip { border-color: #666; color: #bbb; }
+  /* Divider */
+  .vb-div {
+    height: 1px;
+    background: #eee;
+    margin: 0 16px;
+  }
+
+  /* ══════════════════════════════════════════════
+     VARIANT C — Bold Header + Compact Rows
+     ══════════════════════════════════════════════ */
+  .vc-content {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .vc-banner {
+    padding: 14px 16px 10px;
+    border-bottom: 2px solid #000;
+    flex-shrink: 0;
+  }
+  .vc-banner-title {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .vc-banner-desc {
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .vc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 42px;
+    min-height: 42px;
+    padding: 0 16px;
+    font-size: 13px;
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0;
+  }
+  .vc-row.sel {
+    background: #000;
+    color: #fff;
+  }
+  .vc-row .val {
+    font-size: 12px;
+    color: #555;
+    background: #f0f0f0;
+    padding: 2px 10px;
+    border-radius: 3px;
+  }
+  .vc-row.sel .val { background: #333; color: #ccc; }
+  .vc-row .name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 8px;
+  }
+  .vc-row .arrow {
+    font-size: 14px;
+    color: #aaa;
+  }
+  .vc-row.sel .arrow { color: #666; }
+</style>
+</head>
+<body>
+
+<!-- ============ VARIANT A: Card Groups ============ -->
+<div>
+  <div class="label">
+    Variant A — Card Groups
+    <small>Settings grouped into visual cards</small>
+  </div>
+  <div class="screen">
+    <div class="hdr">
+      <div class="hdr-title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="hdr-sub">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <div class="split">
+      <div class="side">
+        <div class="side-item active"><div class="side-icon">Aa</div><div class="side-label">Font</div></div>
+        <div class="side-item"><div class="side-icon">◐</div><div class="side-label">Display</div></div>
+        <div class="side-item"><div class="side-icon">⇥</div><div class="side-label">Navigate</div></div>
+        <div class="side-item"><div class="side-icon">⚙</div><div class="side-label">Tools</div></div>
+      </div>
+
+      <div class="va-content">
+        <div class="va-card">
+          <div class="va-card-title">Typography</div>
+          <div class="va-row sel">
+            <span>Font Family</span>
+            <span class="val">Cloud Loop</span>
+          </div>
+          <div class="va-row">
+            <span>Font Size</span>
+            <span class="val">16</span>
+          </div>
+          <div class="va-row">
+            <span>Line Spacing</span>
+            <span class="val">Wide</span>
+          </div>
+        </div>
+        <div class="va-card">
+          <div class="va-card-title">Paragraph</div>
+          <div class="va-row">
+            <span>Alignment</span>
+            <span class="val">Justified</span>
+          </div>
+          <div class="va-row">
+            <span>Hyphenation</span>
+            <span class="val">OFF</span>
+          </div>
+        </div>
+        <div class="va-card">
+          <div class="va-card-title">Rendering</div>
+          <div class="va-row">
+            <span>Embedded Style</span>
+            <span class="val">ON</span>
+          </div>
+          <div class="va-row">
+            <span>Anti-aliasing</span>
+            <span class="val">ON</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">Select</div>
+      <div class="h">◀ Tab</div>
+      <div class="h">Tab ▶</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VARIANT B: Inline Toggles ============ -->
+<div>
+  <div class="label">
+    Variant B — Inline Toggles
+    <small>Toggle switches for ON/OFF, chips for values</small>
+  </div>
+  <div class="screen">
+    <div class="hdr">
+      <div class="hdr-title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="hdr-sub">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <div class="split">
+      <div class="side">
+        <div class="side-item"><div class="side-icon">Aa</div><div class="side-label">Font</div></div>
+        <div class="side-item active"><div class="side-icon">◐</div><div class="side-label">Display</div></div>
+        <div class="side-item"><div class="side-icon">⇥</div><div class="side-label">Navigate</div></div>
+        <div class="side-item"><div class="side-icon">⚙</div><div class="side-label">Tools</div></div>
+      </div>
+
+      <div class="vb-content">
+        <div class="vb-section-hdr">Appearance</div>
+        <div class="vb-row sel">
+          <span class="name">Dark Mode</span>
+          <div class="vb-toggle on"></div>
+        </div>
+        <div class="vb-div"></div>
+        <div class="vb-row">
+          <span class="name">Screen Margin</span>
+          <span class="vb-chip">35 px</span>
+        </div>
+        <div class="vb-div"></div>
+        <div class="vb-row">
+          <span class="name">Orientation</span>
+          <span class="vb-chip">Portrait</span>
+        </div>
+
+        <div class="vb-section-hdr">Advanced</div>
+        <div class="vb-row">
+          <span class="name">Status Bar</span>
+          <span class="vb-chip">Customise ›</span>
+        </div>
+        <div class="vb-div"></div>
+        <div class="vb-row">
+          <span class="name">Fading Fix</span>
+          <div class="vb-toggle"></div>
+        </div>
+        <div class="vb-div"></div>
+        <div class="vb-row">
+          <span class="name">Refresh Freq</span>
+          <span class="vb-chip">15 pages</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">Select</div>
+      <div class="h">◀ Tab</div>
+      <div class="h">Tab ▶</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VARIANT C: Bold Header + Compact ============ -->
+<div>
+  <div class="label">
+    Variant C — Bold Header + Value Badges
+    <small>Large tab title, value shown as badge pill</small>
+  </div>
+  <div class="screen">
+    <div class="hdr">
+      <div class="hdr-title">ปล่อยแม่มดคนนั้นซะ (放开那个女巫) 1...</div>
+      <div class="hdr-sub">Chapter: 2/22 pages &nbsp;|&nbsp; Book: 36%</div>
+    </div>
+
+    <div class="split">
+      <div class="side">
+        <div class="side-item"><div class="side-icon">Aa</div><div class="side-label">Font</div></div>
+        <div class="side-item"><div class="side-icon">◐</div><div class="side-label">Display</div></div>
+        <div class="side-item active"><div class="side-icon">⇥</div><div class="side-label">Navigate</div></div>
+        <div class="side-item"><div class="side-icon">⚙</div><div class="side-label">Tools</div></div>
+      </div>
+
+      <div class="vc-content">
+        <div class="vc-banner">
+          <div class="vc-banner-title">Navigate</div>
+          <div class="vc-banner-desc">Chapter selection & page navigation</div>
+        </div>
+        <div class="vc-row sel">
+          <span class="name">Select Chapter</span>
+          <span class="arrow">›</span>
+        </div>
+        <div class="vc-row">
+          <span class="name">Go to %</span>
+          <span class="val">36%</span>
+        </div>
+        <div class="vc-row">
+          <span class="name">Auto Turn</span>
+          <span class="val">OFF</span>
+        </div>
+        <div class="vc-row">
+          <span class="name">Footnotes</span>
+          <span class="arrow">›</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hints">
+      <div class="h">« Back</div>
+      <div class="h">Select</div>
+      <div class="h">◀ Tab</div>
+      <div class="h">Tab ▶</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
