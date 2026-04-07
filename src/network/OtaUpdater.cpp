@@ -257,14 +257,20 @@ bool OtaUpdater::isUpdateNewer() const {
     return false;
   }
 
-  int currentMajor, currentMinor, currentPatch;
-  int latestMajor, latestMinor, latestPatch;
+  int currentMajor = 0, currentMinor = 0, currentPatch = 0;
+  int latestMajor = 0, latestMinor = 0, latestPatch = 0;
 
   const auto currentVersion = CROSSPOINT_VERSION;
 
   // semantic version check (only match on 3 segments)
-  sscanf(latestVersion.c_str(), "%d.%d.%d", &latestMajor, &latestMinor, &latestPatch);
-  sscanf(currentVersion, "%d.%d.%d", &currentMajor, &currentMinor, &currentPatch);
+  const int latestParsed = sscanf(latestVersion.c_str(), "%d.%d.%d", &latestMajor, &latestMinor, &latestPatch);
+  const int currentParsed = sscanf(currentVersion, "%d.%d.%d", &currentMajor, &currentMinor, &currentPatch);
+
+  // If either version string failed to parse as semver, treat as newer to allow update
+  if (latestParsed < 3 || currentParsed < 3) {
+    LOG_ERR("OTA", "Version parse failed (latest=%d, current=%d), allowing update", latestParsed, currentParsed);
+    return true;
+  }
 
   /*
    * Compare major versions.
