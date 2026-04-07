@@ -520,7 +520,7 @@ void ModernTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCou
     const int textHeight = renderer.getLineHeight(UI_10_FONT_ID);
     constexpr int iconTextGap = 6;
     const int contentHeight = mainMenuIconSize + iconTextGap + textHeight;
-    const int contentStartY = tileY + (rowHeight - contentHeight) / 2;
+    const int contentStartY = tileY + (rowHeight - contentHeight) / 2 + 10;
 
     int iconX = tileX + (colWidth - mainMenuIconSize) / 2;
     int iconY = contentStartY;
