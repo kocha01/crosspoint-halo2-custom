@@ -205,6 +205,11 @@ void EpubReaderMenuActivity::loop() {
         requestUpdate();
         return;
       }
+      if (selectedAction == MenuAction::ROTATE_SCREEN) {
+        pendingOrientation = (pendingOrientation + 1) % CrossPointSettings::ORIENTATION_COUNT;
+        requestUpdate();
+        return;
+      }
       if (selectedAction == MenuAction::BACKGROUND_TEXTURE) {
         currentTexture = static_cast<Texture>((static_cast<uint8_t>(currentTexture) + 1) %
                                                static_cast<uint8_t>(Texture::TEXTURE_COUNT));

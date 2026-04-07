@@ -71,6 +71,8 @@ bool isAlphabetic(const uint32_t cp) { return isLatinLetter(cp) || isCyrillicLet
 
 bool isThaiCharacter(const uint32_t cp) { return cp >= 0x0E00 && cp <= 0x0E7F; }
 
+bool isThaiConsonant(const uint32_t cp) { return cp >= 0x0E01 && cp <= 0x0E2E; }
+
 // Thai combining marks: above/below vowels, tone marks, and other diacritics
 // that MUST stay attached to their preceding base consonant.
 bool isThaiCombining(const uint32_t cp) {

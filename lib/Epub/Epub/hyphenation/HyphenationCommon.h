@@ -18,6 +18,7 @@ bool isCyrillicLetter(uint32_t cp);
 
 bool isAlphabetic(uint32_t cp);
 bool isThaiCharacter(uint32_t cp);
+bool isThaiConsonant(uint32_t cp);
 bool isThaiCombining(uint32_t cp);
 bool isThaiFollowingVowel(uint32_t cp);
 bool isThaiLeadingVowel(uint32_t cp);

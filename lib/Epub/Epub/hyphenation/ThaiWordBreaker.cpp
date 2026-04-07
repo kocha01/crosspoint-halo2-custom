@@ -68,6 +68,13 @@ std::vector<bool> buildBoundaryFlags(const std::vector<CodepointInfo>& cps) {
 
   for (size_t idx = 1; idx < cps.size(); ++idx) {
     boundaries[idx] = isValidThaiBoundary(cps[idx - 1].value, cps[idx].value);
+    // Prevent breaking before a consonant followed by การันต์ (์).
+    // Such consonants are silent finals belonging to the preceding syllable
+    // (e.g. "ไพรซ์" must not split as "ไพร/ซ์").
+    if (boundaries[idx] && isThaiConsonant(cps[idx].value) && idx + 1 < cps.size() &&
+        cps[idx + 1].value == 0x0E4C) {
+      boundaries[idx] = false;
+    }
   }
 
   return boundaries;
@@ -251,8 +258,24 @@ std::vector<size_t> ThaiWordBreaker::breakIndexes(const std::vector<CodepointInf
       if (segment.isKnownWord || segment.end - segment.start < 2) {
         continue;
       }
+      // For unknown segments (e.g. transliterated words not in the dictionary),
+      // only break at positions that look like Thai syllable starts, not at
+      // every valid boundary. This prevents aggressive splits like "ท/ริ/ค".
       for (size_t idx = segment.start + 1; idx < segment.end; ++idx) {
-        if (boundaries[idx]) {
+        if (!boundaries[idx]) {
+          continue;
+        }
+        const uint32_t cp = cps[idx].value;
+        // Leading vowels (เ แ โ ไ ใ) always start a new syllable
+        if (isThaiLeadingVowel(cp)) {
+          breaks.push_back(idx);
+        } else if (isThaiConsonant(cp)) {
+          // Skip consonants that form a cluster with the preceding consonant
+          // (ร ล ว after another consonant, e.g. กร ปล คว)
+          if (idx > segment.start && isThaiConsonant(cps[idx - 1].value) &&
+              (cp == 0x0E23 || cp == 0x0E25 || cp == 0x0E27)) {
+            continue;
+          }
           breaks.push_back(idx);
         }
       }
