@@ -292,9 +292,9 @@ bool OtaUpdater::isUpdateNewer() const {
   if (latestPatch != currentPatch) return latestPatch > currentPatch;
 
   // If we reach here, it means all segments are equal.
-  // One final check, if we're on an RC build (contains "-rc"), we should consider the latest version as newer even if
-  // the segments are equal, since RC builds are pre-release versions.
-  if (strstr(currentVersion, "-rc") != nullptr) {
+  // If we're on a pre-release build (-rc or -dev), consider the release version as newer
+  // so dev/rc builds can always OTA to the matching release.
+  if (strstr(currentVersion, "-rc") != nullptr || strstr(currentVersion, "-dev") != nullptr) {
     return true;
   }
 
