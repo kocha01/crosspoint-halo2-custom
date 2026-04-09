@@ -4,13 +4,11 @@
 #include <Logging.h>
 
 #include "esp_http_client.h"
-#include "esp_ota_ops.h"
+#include "esp_https_ota.h"
 #include "esp_wifi.h"
 
 namespace {
 constexpr char latestReleaseUrl[] = "https://api.github.com/repos/kocha01/crosspoint-halo2-custom/releases/latest";
-constexpr int kUrlResolveMaxHops = 5;
-constexpr int kUrlBufSize = 768;  // Long enough for pre-signed S3 CDN URLs
 
 /* This is buffer and size holder to keep upcoming data from latestReleaseUrl */
 char* local_buf;
@@ -27,89 +25,6 @@ extern esp_err_t esp_crt_bundle_attach(void* conf);
 
 esp_err_t http_client_set_header_cb(esp_http_client_handle_t http_client) {
   return esp_http_client_set_header(http_client, "User-Agent", "CrossPoint-ESP32-" CROSSPOINT_VERSION);
-}
-
-/* Context for capturing Location response headers during redirect resolution */
-struct UrlResolveCtx {
-  char location[kUrlBufSize];
-};
-
-/* Captures Location header from each HTTP response during redirect chain */
-esp_err_t url_resolve_event(esp_http_client_event_t* evt) {
-  if (evt->event_id != HTTP_EVENT_ON_HEADER) return ESP_OK;
-  auto* ctx = static_cast<UrlResolveCtx*>(evt->user_data);
-  if (strcasecmp(evt->header_key, "location") == 0) {
-    strncpy(ctx->location, evt->header_value, sizeof(ctx->location) - 1);
-    ctx->location[sizeof(ctx->location) - 1] = '\0';
-  }
-  return ESP_OK;
-}
-
-/*
- * Follow HTTP redirect chain manually using HEAD requests to obtain the final
- * CDN URL without auto-following redirects in esp_http_client.
- *
- * GitHub browser_download_url redirects: github.com → objects.githubusercontent.com (S3).
- * esp_https_ota uses esp_http_client_open internally which does NOT follow redirects,
- * so we pre-resolve the URL here to avoid the problem entirely.
- *
- * Returns the resolved CDN URL, or the original URL if resolution fails.
- */
-std::string resolveRedirectUrl(const std::string& startUrl) {
-  std::string currentUrl = startUrl;
-
-  for (int hop = 0; hop < kUrlResolveMaxHops; hop++) {
-    UrlResolveCtx ctx = {};
-
-    esp_http_client_config_t config = {
-        .url = currentUrl.c_str(),
-        .timeout_ms = 10000,
-        .max_redirection_count = 0,  // Manual redirect following
-        .event_handler = url_resolve_event,
-        .buffer_size = 4096,
-        .buffer_size_tx = 1024,
-        .user_data = &ctx,
-        .skip_cert_common_name_check = true,
-        .crt_bundle_attach = esp_crt_bundle_attach,
-    };
-
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-    if (!client) {
-      LOG_ERR("OTA", "URL resolve: client init failed at hop %d", hop);
-      break;
-    }
-
-    esp_http_client_set_method(client, HTTP_METHOD_HEAD);
-    esp_http_client_set_header(client, "User-Agent", "CrossPoint-ESP32-" CROSSPOINT_VERSION);
-
-    /* open + fetch_headers: triggers HTTP_EVENT_ON_HEADER for each response header */
-    esp_err_t err = esp_http_client_open(client, 0);
-    if (err != ESP_OK) {
-      LOG_ERR("OTA", "URL resolve: open failed at hop %d: %s", hop, esp_err_to_name(err));
-      esp_http_client_cleanup(client);
-      break;
-    }
-
-    esp_http_client_fetch_headers(client);
-    const int status = esp_http_client_get_status_code(client);
-    esp_http_client_cleanup(client);
-
-    LOG_DBG("OTA", "URL resolve hop %d: status=%d", hop, status);
-
-    if (status == 200 || status == 204) {
-      /* currentUrl is already the direct download URL */
-      LOG_DBG("OTA", "URL resolve: final URL found after %d hops", hop);
-      break;
-    } else if (status >= 300 && status < 400 && ctx.location[0] != '\0') {
-      LOG_DBG("OTA", "URL resolve: redirect to %.80s...", ctx.location);
-      currentUrl = ctx.location;
-    } else {
-      LOG_ERR("OTA", "URL resolve: unexpected status=%d at hop %d, using original URL", status, hop);
-      return startUrl;
-    }
-  }
-
-  return currentUrl;
 }
 
 esp_err_t event_handler(esp_http_client_event_t* event) {
@@ -236,19 +151,7 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
     return NO_UPDATE;
   }
 
-  LOG_DBG("OTA", "Found update: %s at %s", latestVersion.c_str(), otaUrl.c_str());
-
-  /* Pre-resolve GitHub redirect → CDN URL.
-   * esp_https_ota uses esp_http_client_open which does not follow redirects.
-   * Resolving here lets installUpdate() use the CDN URL directly with no redirect. */
-  const std::string resolvedUrl = resolveRedirectUrl(otaUrl);
-  if (!resolvedUrl.empty() && resolvedUrl != otaUrl) {
-    LOG_DBG("OTA", "Resolved CDN URL: %.80s...", resolvedUrl.c_str());
-    otaUrl = resolvedUrl;
-  } else {
-    LOG_DBG("OTA", "URL unchanged after resolve (will attempt direct download)");
-  }
-
+  LOG_DBG("OTA", "Found update: %s", latestVersion.c_str());
   return OK;
 }
 
@@ -308,158 +211,69 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate() {
     return UPDATE_OLDER_ERROR;
   }
 
+  esp_https_ota_handle_t ota_handle = NULL;
+  esp_err_t esp_err;
+  /* Signal for OtaUpdateActivity */
   render = false;
 
-  /* Disable WiFi power saving for reliable high-throughput download */
+  esp_http_client_config_t client_config = {
+      .url = otaUrl.c_str(),
+      .timeout_ms = 15000,
+      /* Default HTTP client buffer size 512 byte only
+       * not sufficent to handle URL redirection cases or
+       * parsing of large HTTP headers.
+       */
+      .buffer_size = 8192,
+      .buffer_size_tx = 8192,
+      .skip_cert_common_name_check = true,
+      .crt_bundle_attach = esp_crt_bundle_attach,
+      .keep_alive_enable = true,
+  };
+
+  esp_https_ota_config_t ota_config = {
+      .http_config = &client_config,
+      .http_client_init_cb = http_client_set_header_cb,
+  };
+
+  /* For better timing and connectivity, we disable power saving for WiFi */
   esp_wifi_set_ps(WIFI_PS_NONE);
 
-  /* Find the next OTA partition to write to */
-  const esp_partition_t* partition = esp_ota_get_next_update_partition(NULL);
-  if (!partition) {
-    LOG_ERR("OTA", "No OTA partition available");
+  esp_err = esp_https_ota_begin(&ota_config, &ota_handle);
+  if (esp_err != ESP_OK) {
+    LOG_ERR("OTA", "HTTP OTA Begin Failed: %s", esp_err_to_name(esp_err));
     esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
     return INTERNAL_UPDATE_ERROR;
   }
 
-  /* Begin OTA write session */
-  esp_ota_handle_t ota_handle;
-  esp_err_t err = esp_ota_begin(partition, OTA_SIZE_UNKNOWN, &ota_handle);
-  if (err != ESP_OK) {
-    LOG_ERR("OTA", "esp_ota_begin failed: %s", esp_err_to_name(err));
-    esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
-    return INTERNAL_UPDATE_ERROR;
-  }
+  do {
+    esp_err = esp_https_ota_perform(ota_handle);
+    processedSize = esp_https_ota_get_image_len_read(ota_handle);
+    /* Sent signal to OtaUpdateActivity */
+    render = true;
+    delay(100);
+  } while (esp_err == ESP_ERR_HTTPS_OTA_IN_PROGRESS);
 
-  /*
-   * Download firmware with manual redirect following.
-   * Uses GET requests (not HEAD) and esp_http_client in streaming mode.
-   * On 3xx, captures Location header via event handler and retries.
-   * On 200, streams data directly into the OTA partition.
-   *
-   * This replaces esp_https_ota which could not follow GitHub CDN redirects
-   * (esp_http_client_open does not follow redirects internally).
-   */
-  std::string currentUrl = otaUrl;
-  bool downloadOk = false;
-  constexpr int kMaxRedirects = 10;
-  constexpr int kBufSize = 8192;
-
-  for (int hop = 0; hop < kMaxRedirects && !downloadOk; hop++) {
-    UrlResolveCtx ctx = {};
-
-    esp_http_client_config_t cfg = {
-        .url = currentUrl.c_str(),
-        .timeout_ms = 60000,
-        .event_handler = url_resolve_event,
-        .buffer_size = kBufSize,
-        .buffer_size_tx = 4096,
-        .user_data = &ctx,
-        .skip_cert_common_name_check = true,
-        .crt_bundle_attach = esp_crt_bundle_attach,
-        .keep_alive_enable = true,
-    };
-
-    esp_http_client_handle_t client = esp_http_client_init(&cfg);
-    if (!client) {
-      LOG_ERR("OTA", "Client init failed at hop %d", hop);
-      break;
-    }
-
-    esp_http_client_set_method(client, HTTP_METHOD_GET);
-    esp_http_client_set_header(client, "User-Agent", "CrossPoint-ESP32-" CROSSPOINT_VERSION);
-
-    err = esp_http_client_open(client, 0);
-    if (err != ESP_OK) {
-      LOG_ERR("OTA", "HTTP open failed at hop %d: %s", hop, esp_err_to_name(err));
-      esp_http_client_cleanup(client);
-      break;
-    }
-
-    const int contentLen = esp_http_client_fetch_headers(client);
-    const int status = esp_http_client_get_status_code(client);
-    LOG_DBG("OTA", "Hop %d: status=%d content_len=%d url=%.60s...", hop, status, contentLen, currentUrl.c_str());
-
-    /* Handle redirect */
-    if (status >= 300 && status < 400 && ctx.location[0] != '\0') {
-      LOG_DBG("OTA", "Redirect → %.80s...", ctx.location);
-      currentUrl = ctx.location;
-      esp_http_client_close(client);
-      esp_http_client_cleanup(client);
-      continue;
-    }
-
-    if (status != 200) {
-      LOG_ERR("OTA", "Unexpected HTTP %d at hop %d", status, hop);
-      esp_http_client_close(client);
-      esp_http_client_cleanup(client);
-      break;
-    }
-
-    /* Status 200 — stream firmware data to OTA partition */
-    if (contentLen > 0) {
-      totalSize = static_cast<size_t>(contentLen);
-    }
-
-    char* buf = static_cast<char*>(malloc(kBufSize));
-    if (!buf) {
-      LOG_ERR("OTA", "Download buffer malloc failed");
-      esp_http_client_close(client);
-      esp_http_client_cleanup(client);
-      break;
-    }
-
-    processedSize = 0;
-    bool writeError = false;
-
-    while (true) {
-      const int readLen = esp_http_client_read(client, buf, kBufSize);
-      if (readLen < 0) {
-        LOG_ERR("OTA", "Read error: %d", readLen);
-        writeError = true;
-        break;
-      }
-      if (readLen == 0) {
-        break; /* EOF */
-      }
-
-      err = esp_ota_write(ota_handle, buf, static_cast<size_t>(readLen));
-      if (err != ESP_OK) {
-        LOG_ERR("OTA", "OTA write failed: %s", esp_err_to_name(err));
-        writeError = true;
-        break;
-      }
-
-      processedSize += static_cast<size_t>(readLen);
-      render = true;
-      delay(10);
-    }
-
-    free(buf);
-    esp_http_client_close(client);
-    esp_http_client_cleanup(client);
-    downloadOk = !writeError;
-  }
-
+  /* Return back to default power saving for WiFi in case of failing */
   esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
 
-  if (!downloadOk) {
-    LOG_ERR("OTA", "Download failed, aborting OTA");
-    esp_ota_abort(ota_handle);
+  if (esp_err != ESP_OK) {
+    LOG_ERR("OTA", "esp_https_ota_perform Failed: %s", esp_err_to_name(esp_err));
+    esp_https_ota_finish(ota_handle);
     return HTTP_ERROR;
   }
 
-  err = esp_ota_end(ota_handle);
-  if (err != ESP_OK) {
-    LOG_ERR("OTA", "esp_ota_end failed: %s", esp_err_to_name(err));
+  if (!esp_https_ota_is_complete_data_received(ota_handle)) {
+    LOG_ERR("OTA", "esp_https_ota_is_complete_data_received Failed: %s", esp_err_to_name(esp_err));
+    esp_https_ota_finish(ota_handle);
     return INTERNAL_UPDATE_ERROR;
   }
 
-  err = esp_ota_set_boot_partition(partition);
-  if (err != ESP_OK) {
-    LOG_ERR("OTA", "Set boot partition failed: %s", esp_err_to_name(err));
+  esp_err = esp_https_ota_finish(ota_handle);
+  if (esp_err != ESP_OK) {
+    LOG_ERR("OTA", "esp_https_ota_finish Failed: %s", esp_err_to_name(esp_err));
     return INTERNAL_UPDATE_ERROR;
   }
 
-  LOG_INF("OTA", "Update completed, restarting...");
+  LOG_INF("OTA", "Update completed");
   return OK;
 }
