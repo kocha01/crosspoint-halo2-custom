@@ -128,7 +128,7 @@ static inline void applyThaiUpperStacking(const EpdFontData* fontData, const uin
   if (utf8IsThaiUpperLevelThreeMark(cp) && *hasStackedUpper) {
     // Level-3 mark (tone mark) must sit above the top edge of the level-2 mark
     // with at least MIN_STACK_GAP_PX pixels of clearance.
-    constexpr int MIN_STACK_GAP_PX = 1;
+    const int MIN_STACK_GAP_PX = std::max(1, static_cast<int>(fontData->advanceY) / 10);
     const int desiredMinY = *stackedUpperMaxY + MIN_STACK_GAP_PX;
     if (glyphMinY < desiredMinY) {
       const int extraRaise = desiredMinY - glyphMinY;

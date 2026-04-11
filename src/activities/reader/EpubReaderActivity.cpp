@@ -12,6 +12,8 @@
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
+#include "Epub/hyphenation/ThaiWordBreaker.h"
+#include "activities/settings/ThaiDictionaryActivity.h"
 #include "EpubReaderChapterSelectionActivity.h"
 #include "EpubReaderFootnotesActivity.h"
 #include "EpubReaderPercentSelectionActivity.h"
@@ -111,6 +113,15 @@ void EpubReaderActivity::loop() {
   if (!epub) {
     // Should never happen
     finish();
+    return;
+  }
+
+  // Skip button processing after sub-activity exit until Back is fully released,
+  // preventing the release event from leaking through and triggering "go home".
+  if (skipNextButtonCheck) {
+    if (!mappedInput.isPressed(MappedInputManager::Button::Back)) {
+      skipNextButtonCheck = false;
+    }
     return;
   }
 
@@ -408,6 +419,19 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
       requestUpdate();
       break;
     }
+    case EpubReaderMenuActivity::MenuAction::BOLD_TEXT:
+      // Toggled in the full menu; re-render will pick up the new value
+      requestUpdate();
+      break;
+    case EpubReaderMenuActivity::MenuAction::THAI_DICTIONARY: {
+      startActivityForResult(std::make_unique<ThaiDictionaryActivity>(renderer, mappedInput),
+                             [this](const ActivityResult&) {
+                               RenderLock lock(*this);
+                               section.reset();
+                               skipNextButtonCheck = true;
+                             });
+      break;
+    }
     case EpubReaderMenuActivity::MenuAction::SYNC: {
       if (KOREADER_STORE.hasCredentials()) {
         const int currentPage = section ? section->currentPage : 0;
@@ -575,10 +599,11 @@ void EpubReaderActivity::render(RenderLock&& lock) {
     const uint16_t viewportHeight = renderer.getScreenHeight() - orientedMarginTop - orientedMarginBottom;
 
     const bool forceBold = SETTINGS.readerBoldText != 0;
+    const auto dictCount = static_cast<uint8_t>(ThaiWordBreaker::getUserDictWords().size());
     if (!section->loadSectionFile(getEffectiveFontId(), SETTINGS.getReaderLineCompression(),
                                   SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment, viewportWidth,
                                   viewportHeight, SETTINGS.hyphenationEnabled, SETTINGS.embeddedStyle,
-                                  SETTINGS.imageRendering, forceBold)) {
+                                  SETTINGS.imageRendering, forceBold, dictCount)) {
       LOG_DBG("ERS", "Cache not found, building...");
 
       const auto popupFn = [this]() { GUI.drawPopup(renderer, tr(STR_INDEXING)); };
@@ -586,7 +611,7 @@ void EpubReaderActivity::render(RenderLock&& lock) {
       if (!section->createSectionFile(getEffectiveFontId(), SETTINGS.getReaderLineCompression(),
                                       SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment, viewportWidth,
                                       viewportHeight, SETTINGS.hyphenationEnabled, SETTINGS.embeddedStyle,
-                                      SETTINGS.imageRendering, forceBold, popupFn)) {
+                                      SETTINGS.imageRendering, forceBold, dictCount, popupFn)) {
         LOG_ERR("ERS", "Failed to persist page data to SD");
         section.reset();
         return;

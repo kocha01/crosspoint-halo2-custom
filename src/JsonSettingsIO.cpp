@@ -146,6 +146,9 @@ bool JsonSettingsIO::saveSettings(const CrossPointSettings& s, const char* path)
   // Orientation — managed by reader menu, not in SettingsList.
   doc["orientation"] = s.orientation;
 
+  // Thai keyboard layout — managed by ThaiDictionaryActivity, not in SettingsList.
+  doc["thaiKeyboardLayout"] = s.thaiKeyboardLayout;
+
   // Front button remap — managed by RemapFrontButtons sub-activity, not in SettingsList.
   doc["frontButtonBack"] = s.frontButtonBack;
   doc["frontButtonConfirm"] = s.frontButtonConfirm;
@@ -246,6 +249,11 @@ bool JsonSettingsIO::loadSettings(CrossPointSettings& s, const char* json, bool*
   s.orientation =
       clamp(doc["orientation"] | (uint8_t)CrossPointSettings::PORTRAIT, CrossPointSettings::ORIENTATION_COUNT,
             CrossPointSettings::PORTRAIT);
+
+  // Thai keyboard layout — managed by ThaiDictionaryActivity, not in SettingsList.
+  s.thaiKeyboardLayout =
+      clamp(doc["thaiKeyboardLayout"] | (uint8_t)CrossPointSettings::THAI_KB_ALPHABETICAL,
+            CrossPointSettings::THAI_KB_COUNT, CrossPointSettings::THAI_KB_ALPHABETICAL);
 
   // Front button remap — managed by RemapFrontButtons sub-activity, not in SettingsList.
   using S = CrossPointSettings;

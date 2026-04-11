@@ -32,6 +32,8 @@ class ParsedText {
                    const std::function<void(std::shared_ptr<TextBlock>)>& processLine, const GfxRenderer& renderer,
                    int fontId);
   std::vector<uint16_t> calculateWordWidths(const GfxRenderer& renderer, int fontId);
+  void addWordInternal(std::string word, EpdFontFamily::Style fontStyle, bool underline, bool attachToPrevious);
+  void autoSegmentThaiWord(std::string word, EpdFontFamily::Style fontStyle, bool underline, bool attachToPrevious);
 
  public:
   explicit ParsedText(const bool extraParagraphSpacing, const bool hyphenationEnabled = false,

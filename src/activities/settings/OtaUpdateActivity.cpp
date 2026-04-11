@@ -152,7 +152,8 @@ void OtaUpdateActivity::loop() {
         state = UPDATE_IN_PROGRESS;
       }
       requestUpdateAndWait();
-      const auto res = updater.installUpdate();
+      const auto res = updater.installUpdate(
+          [](void* ctx) { static_cast<OtaUpdateActivity*>(ctx)->requestUpdateAndWait(); }, this);
 
       if (res != OtaUpdater::OK) {
         LOG_DBG("OTA", "Update failed: %d", res);
@@ -190,6 +191,11 @@ void OtaUpdateActivity::loop() {
       finish();
     }
     return;
+  }
+
+  if (state == FINISHED) {
+    delay(3000);
+    state = SHUTTING_DOWN;
   }
 
   if (state == SHUTTING_DOWN) {

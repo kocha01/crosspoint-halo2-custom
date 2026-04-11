@@ -417,6 +417,14 @@ std::vector<CodepointInfo> collectCodepoints(const std::string& word) {
         cps.back().value = composed;
         continue;  // skip pushing the combining mark itself
       }
+
+      // Thai Sara Am composition: U+0E4D (Nikhahit) + U+0E32 (Sara AA) → U+0E33 (Sara Am).
+      // Some EPUB sources use the decomposed form; normalizing ensures correct
+      // dictionary matching and text measurement.
+      if (cps.back().value == 0x0E4D && cp == 0x0E32) {
+        cps.back().value = 0x0E33;
+        continue;
+      }
     }
 
     cps.push_back({cp, static_cast<size_t>(current - base)});

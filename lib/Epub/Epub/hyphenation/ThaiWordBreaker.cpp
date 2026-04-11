@@ -1,5 +1,8 @@
 #include "ThaiWordBreaker.h"
 
+#include <Logging.h>
+#include <Utf8.h>
+
 #include <algorithm>
 #include <cstdint>
 #include <limits>
@@ -7,7 +10,12 @@
 
 #include "generated/thai_word_dawg.h"
 
+// Static member definition
+std::vector<std::vector<uint16_t>> ThaiWordBreaker::userDictWords_;
+
 namespace {
+
+constexpr size_t MAX_USER_DICT_WORDS = 200;
 
 struct MatchEdge {
   size_t endIndex;
@@ -89,12 +97,40 @@ size_t nextBoundaryIndex(const std::vector<bool>& boundaries, const size_t from)
   return boundaries.size() - 1;
 }
 
+// Check user dictionary words starting at position `start` in the codepoint array.
+// User dictionary words are stored as uint16_t codepoint sequences for compact matching.
+void collectUserDictMatchEnds(const std::vector<CodepointInfo>& cps, const size_t start,
+                              const std::vector<bool>& boundaries,
+                              const std::vector<std::vector<uint16_t>>& userDict,
+                              std::vector<MatchEdge>& outMatches) {
+  if (userDict.empty()) return;
+
+  for (const auto& dictWord : userDict) {
+    const size_t end = start + dictWord.size();
+    if (end > cps.size()) continue;
+    if (!boundaries[end]) continue;
+
+    bool match = true;
+    for (size_t i = 0; i < dictWord.size(); ++i) {
+      if (static_cast<uint16_t>(cps[start + i].value) != dictWord[i]) {
+        match = false;
+        break;
+      }
+    }
+
+    if (match) {
+      outMatches.push_back({end});
+    }
+  }
+}
+
 void collectDictionaryMatchEnds(const std::vector<CodepointInfo>& cps, const size_t start,
                                 const std::vector<bool>& boundaries, std::vector<MatchEdge>& outMatches) {
   if (start >= cps.size() || !isThaiCharacter(cps[start].value)) {
     return;
   }
 
+  // Check DAWG dictionary
   uint16_t nodeIndex = thai_word_dawg::kRootNode;
   size_t pos = start;
 
@@ -146,6 +182,9 @@ void collectDictionaryMatchEnds(const std::vector<CodepointInfo>& cps, const siz
       break;
     }
   }
+
+  // Also check user dictionary words (supplements the DAWG)
+  collectUserDictMatchEnds(cps, start, boundaries, ThaiWordBreaker::getUserDictWords(), outMatches);
 }
 
 std::vector<Segment> buildSegments(const std::vector<Decision>& decisions, const size_t length) {
@@ -286,3 +325,36 @@ std::vector<size_t> ThaiWordBreaker::breakIndexes(const std::vector<CodepointInf
   breaks.erase(std::unique(breaks.begin(), breaks.end()), breaks.end());
   return breaks;
 }
+
+void ThaiWordBreaker::setUserDictionary(const std::vector<std::string>& words) {
+  userDictWords_.clear();
+
+  const size_t count = std::min(words.size(), MAX_USER_DICT_WORDS);
+  userDictWords_.reserve(count);
+
+  for (size_t i = 0; i < count; ++i) {
+    const auto& word = words[i];
+    if (word.empty()) continue;
+
+    // Convert UTF-8 word to a compact uint16_t codepoint sequence.
+    // Thai codepoints (U+0E00–U+0E7F) fit in 16 bits.
+    std::vector<uint16_t> cps;
+    cps.reserve(word.size() / 3 + 1);  // Thai chars are 3 bytes in UTF-8
+
+    const auto* ptr = reinterpret_cast<const unsigned char*>(word.c_str());
+    uint32_t cp;
+    while ((cp = utf8NextCodepoint(&ptr))) {
+      cps.push_back(static_cast<uint16_t>(cp));
+    }
+
+    if (cps.size() >= 2) {
+      userDictWords_.push_back(std::move(cps));
+    }
+  }
+
+  if (!userDictWords_.empty()) {
+    LOG_INF("THAI", "Loaded %d user dictionary words", static_cast<int>(userDictWords_.size()));
+  }
+}
+
+bool ThaiWordBreaker::hasUserDictionary() { return !userDictWords_.empty(); }

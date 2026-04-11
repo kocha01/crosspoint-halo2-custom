@@ -29,7 +29,9 @@ class EpubReaderMenuActivity final : public Activity {
     GO_HOME,
     SYNC,
     DELETE_CACHE,
-    BACKGROUND_TEXTURE
+    BACKGROUND_TEXTURE,
+    BOLD_TEXT,
+    THAI_DICTIONARY
   };
 
   // Two modes: quick settings (default) and full menu (More)

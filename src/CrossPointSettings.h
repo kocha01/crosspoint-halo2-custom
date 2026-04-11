@@ -212,6 +212,11 @@ class CrossPointSettings {
   uint8_t readerBoldText = 0;
   // Reader menu background texture (0 = Dots, 1 = Dark)
   uint8_t menuTexture = 0;
+  // Thai keyboard layout (0 = Alphabetical ก-ฮ, 1 = Kedmanee)
+  static constexpr uint8_t THAI_KB_ALPHABETICAL = 0;
+  static constexpr uint8_t THAI_KB_KEDMANEE = 1;
+  static constexpr uint8_t THAI_KB_COUNT = 2;
+  uint8_t thaiKeyboardLayout = THAI_KB_ALPHABETICAL;
 
   ~CrossPointSettings() = default;
 

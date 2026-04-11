@@ -8,31 +8,26 @@
 #include "../Activity.h"
 #include "util/ButtonNavigator.h"
 
+enum class KeyboardLayout { English, Thai };
+
 /**
  * Reusable keyboard entry activity for text input.
+ * Supports English (QWERTY) and Thai (frequency-ordered) layouts.
  * Can be started from any activity that needs text entry via startActivityForResult()
  */
 class KeyboardEntryActivity : public Activity {
  public:
-  /**
-   * Constructor
-   * @param renderer Reference to the GfxRenderer for drawing
-   * @param mappedInput Reference to MappedInputManager for handling input
-   * @param title Title to display above the keyboard
-   * @param initialText Initial text to show in the input field
-   * @param maxLength Maximum length of input text (0 for unlimited)
-   * @param isPassword If true, display asterisks instead of actual characters
-   */
   explicit KeyboardEntryActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                  std::string title = "Enter Text", std::string initialText = "",
-                                 const size_t maxLength = 0, const bool isPassword = false)
+                                 const size_t maxLength = 0, const bool isPassword = false,
+                                 const KeyboardLayout initialLayout = KeyboardLayout::English)
       : Activity("KeyboardEntry", renderer, mappedInput),
         title(std::move(title)),
         text(std::move(initialText)),
         maxLength(maxLength),
-        isPassword(isPassword) {}
+        isPassword(isPassword),
+        layout(initialLayout) {}
 
-  // Activity overrides
   void onEnter() override;
   void onExit() override;
   void loop() override;
@@ -43,24 +38,22 @@ class KeyboardEntryActivity : public Activity {
   std::string text;
   size_t maxLength;
   bool isPassword;
+  KeyboardLayout layout;
 
   ButtonNavigator buttonNavigator;
 
   // Keyboard state
   int selectedRow = 0;
   int selectedCol = 0;
-  int shiftState = 0;  // 0 = lower case, 1 = upper case, 2 = shift lock)
+  int shiftState = 0;  // 0 = normal, 1 = shifted, 2 = shift lock
 
   // Handlers
   void onComplete(std::string text);
   void onCancel();
 
-  // Keyboard layout
+  // Layout constants
   static constexpr int NUM_ROWS = 5;
-  static constexpr int KEYS_PER_ROW = 13;  // Max keys per row (rows 0 and 1 have 13 keys)
-  static const char* const keyboard[NUM_ROWS];
-  static const char* const keyboardShift[NUM_ROWS];
-  static const char* const shiftString[3];
+  static constexpr int KEYS_PER_ROW = 13;
 
   // Special key positions (bottom row)
   static constexpr int SPECIAL_ROW = 4;
@@ -69,7 +62,28 @@ class KeyboardEntryActivity : public Activity {
   static constexpr int BACKSPACE_COL = 7;
   static constexpr int DONE_COL = 9;
 
-  char getSelectedChar() const;
-  bool handleKeyPress();  // false if onComplete was triggered
+  // Layout data — each key is a null-terminated UTF-8 string.
+  // English layout
+  static const char* const englishKeys[NUM_ROWS][KEYS_PER_ROW];
+  static const char* const englishKeysShift[NUM_ROWS][KEYS_PER_ROW];
+  static const int englishRowLengths[NUM_ROWS];
+
+  // Thai Kedmanee layout (standard Thai computer keyboard)
+  static const char* const thaiKeysKed[NUM_ROWS][KEYS_PER_ROW];
+  static const char* const thaiKeysKedShift[NUM_ROWS][KEYS_PER_ROW];
+  static const int thaiRowLengths[NUM_ROWS];
+
+  static const char* const shiftString[3];
+
+  // Long-press threshold for Back button cancel (Thai keyboard)
+  static constexpr unsigned long LONG_PRESS_MS = 500;
+
+  // Key access for current layout
+  const char* getKeyAt(int row, int col) const;
   int getRowLength(int row) const;
+  bool handleKeyPress();
+
+  // UTF-8 aware text manipulation
+  void appendKey(const char* key);
+  void backspaceUtf8();
 };

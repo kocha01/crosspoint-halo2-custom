@@ -46,6 +46,20 @@ bool containsSoftHyphen(const std::string& word) { return word.find(SOFT_HYPHEN_
 
 bool isZeroWidthBreakToken(const std::string& word) { return word == ZERO_WIDTH_SPACE_UTF8; }
 
+// Returns true if the word contains at least 2 Thai codepoints (U+0E00–U+0E7F),
+// indicating it is a Thai word worth auto-segmenting for DP line breaking.
+bool containsThaiText(const std::string& word) {
+  int thaiCount = 0;
+  const auto* ptr = reinterpret_cast<const unsigned char*>(word.c_str());
+  uint32_t cp;
+  while ((cp = utf8NextCodepoint(&ptr))) {
+    if (cp >= 0x0E00 && cp <= 0x0E7F) {
+      if (++thaiCount >= 2) return true;
+    }
+  }
+  return false;
+}
+
 bool hasZeroWidthBreakTokens(const std::vector<std::string>& words) {
   return std::any_of(words.begin(), words.end(), [](const std::string& word) { return isZeroWidthBreakToken(word); });
 }
@@ -159,6 +173,21 @@ void ParsedText::addWord(std::string word, const EpdFontFamily::Style fontStyle,
                          const bool attachToPrevious) {
   if (word.empty()) return;
 
+  // Auto-segment Thai text to enable DP line breaking.
+  // Words with ≥2 Thai codepoints are split at dictionary word boundaries
+  // and ZWSP tokens inserted between segments, allowing the DP layout
+  // engine to find optimal line break positions without requiring
+  // pre-processed EPUB content.
+  if (word.size() >= 6 && containsThaiText(word)) {
+    autoSegmentThaiWord(std::move(word), fontStyle, underline, attachToPrevious);
+    return;
+  }
+
+  addWordInternal(std::move(word), fontStyle, underline, attachToPrevious);
+}
+
+void ParsedText::addWordInternal(std::string word, const EpdFontFamily::Style fontStyle, const bool underline,
+                                 const bool attachToPrevious) {
   words.push_back(std::move(word));
   EpdFontFamily::Style combinedStyle = fontStyle;
   if (underline) {
@@ -166,6 +195,58 @@ void ParsedText::addWord(std::string word, const EpdFontFamily::Style fontStyle,
   }
   wordStyles.push_back(combinedStyle);
   wordContinues.push_back(attachToPrevious);
+}
+
+void ParsedText::autoSegmentThaiWord(std::string word, const EpdFontFamily::Style fontStyle, const bool underline,
+                                     const bool attachToPrevious) {
+  // Use the hyphenation engine to find Thai dictionary word boundaries.
+  // includeFallback=false ensures only dictionary-matched boundaries are used,
+  // not cluster-level fallback splits.
+  auto breakInfos = Hyphenator::breakOffsets(word, false);
+
+  if (breakInfos.empty()) {
+    // No break points found — add the word as a single token.
+    addWordInternal(std::move(word), fontStyle, underline, attachToPrevious);
+    return;
+  }
+
+  // Split word at each break offset and insert ZWSP tokens between segments.
+  // ZWSP tokens enable the DP line breaker path (Mode A) and allow the layout
+  // engine to distribute Thai text across lines without visible word gaps.
+  size_t lastOffset = 0;
+  bool isFirst = true;
+
+  for (const auto& info : breakInfos) {
+    if (info.byteOffset <= lastOffset || info.byteOffset >= word.size()) continue;
+
+    std::string segment = word.substr(lastOffset, info.byteOffset - lastOffset);
+    if (!segment.empty()) {
+      if (isFirst) {
+        addWordInternal(std::move(segment), fontStyle, underline, attachToPrevious);
+        isFirst = false;
+      } else {
+        // Insert ZWSP as a zero-width break opportunity, then the segment.
+        // Both are marked as continuations (attachToPrevious=true) so they
+        // render without visible inter-word spacing.
+        addWordInternal(std::string(ZERO_WIDTH_SPACE_UTF8), fontStyle, false, true);
+        addWordInternal(std::move(segment), fontStyle, underline, true);
+      }
+    }
+    lastOffset = info.byteOffset;
+  }
+
+  // Add the remaining part after the last break point.
+  if (lastOffset < word.size()) {
+    std::string remaining = word.substr(lastOffset);
+    if (!remaining.empty()) {
+      if (isFirst) {
+        addWordInternal(std::move(remaining), fontStyle, underline, attachToPrevious);
+      } else {
+        addWordInternal(std::string(ZERO_WIDTH_SPACE_UTF8), fontStyle, false, true);
+        addWordInternal(std::move(remaining), fontStyle, underline, true);
+      }
+    }
+  }
 }
 
 // Consumes data to minimize memory usage

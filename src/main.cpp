@@ -15,8 +15,10 @@
 
 #include <cstring>
 
+#include "BleTimeSync.h"
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
+#include "Epub/hyphenation/ThaiWordBreaker.h"
 #include "KOReaderCredentialStore.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
@@ -192,6 +194,60 @@ void enterDeepSleep() {
   powerManager.startDeepSleep(gpio);
 }
 
+// Load user-supplied Thai dictionary words from SD card (/crosspoint/thai_dict.txt).
+// Each line should contain one Thai word. Lines starting with '#' are comments.
+// Maximum 200 words to stay within ESP32-C3 memory constraints.
+void loadThaiUserDictionary() {
+  static constexpr char DICT_PATH[] = "/crosspoint/thai_dict.txt";
+  static constexpr size_t MAX_BUF = 8192;  // 8 KB max file size
+
+  if (!Storage.exists(DICT_PATH)) {
+    return;
+  }
+
+  // Stack buffer would be too large (> 256 bytes), so use heap allocation.
+  auto* buf = static_cast<char*>(malloc(MAX_BUF));
+  if (!buf) {
+    LOG_ERR("MAIN", "Failed to allocate buffer for Thai user dictionary");
+    return;
+  }
+
+  const size_t bytesRead = Storage.readFileToBuffer(DICT_PATH, buf, MAX_BUF);
+  if (bytesRead == 0) {
+    free(buf);
+    return;
+  }
+
+  std::vector<std::string> words;
+  words.reserve(64);
+
+  // Parse line by line
+  size_t lineStart = 0;
+  for (size_t i = 0; i <= bytesRead; ++i) {
+    if (i == bytesRead || buf[i] == '\n' || buf[i] == '\r') {
+      if (i > lineStart) {
+        // Trim trailing whitespace
+        size_t lineEnd = i;
+        while (lineEnd > lineStart && (buf[lineEnd - 1] == ' ' || buf[lineEnd - 1] == '\t')) {
+          --lineEnd;
+        }
+        if (lineEnd > lineStart && buf[lineStart] != '#') {
+          words.emplace_back(buf + lineStart, lineEnd - lineStart);
+        }
+      }
+      lineStart = i + 1;
+    }
+  }
+
+  free(buf);
+  buf = nullptr;
+
+  if (!words.empty()) {
+    ThaiWordBreaker::setUserDictionary(words);
+    LOG_DBG("MAIN", "Thai user dictionary: %d words from %s", static_cast<int>(words.size()), DICT_PATH);
+  }
+}
+
 void setupDisplayAndFonts() {
   display.begin();
   renderer.begin();
@@ -283,6 +339,9 @@ void setup() {
   UITheme::getInstance().reload();
   ButtonNavigator::setMappedInputManager(mappedInputManager);
 
+  // Load optional Thai user dictionary from SD card (non-blocking, silently skips if absent)
+  loadThaiUserDictionary();
+
   switch (gpio.getWakeupReason()) {
     case HalGPIO::WakeupReason::PowerButton:
       // For normal wakeups, verify power button press duration
@@ -305,6 +364,16 @@ void setup() {
   LOG_DBG("MAIN", "Starting CrossPoint version " CROSSPOINT_VERSION);
 
   setupDisplayAndFonts();
+
+  // BLE time sync at boot — disabled until clock UI is ready
+  // To re-enable: uncomment the block below
+  // {
+  //   renderer.clearScreen();
+  //   renderer.drawCenteredText(UI_10_FONT_ID, renderer.getScreenHeight() / 2 - 10, "CROSSPOINT", true,
+  //   EpdFontFamily::BOLD); renderer.drawCenteredText(SMALL_FONT_ID, renderer.getScreenHeight() / 2 + 15, "Syncing
+  //   time via Bluetooth..."); renderer.displayBuffer(); const bool synced = BleTimeSync::sync(10000);
+  //   LOG_INF("MAIN", "BLE time sync: %s", synced ? "OK" : "timeout");
+  // }
 
   activityManager.goToBoot();
 

@@ -23,6 +23,7 @@ enum class SettingAction {
   ClearRecentBooks,
   CheckForUpdates,
   Language,
+  ThaiDictionary,
 };
 
 struct SettingInfo {

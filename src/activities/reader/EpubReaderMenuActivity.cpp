@@ -59,6 +59,7 @@ EpubReaderMenuActivity::EpubReaderMenuActivity(GfxRenderer& renderer, MappedInpu
 std::vector<EpubReaderMenuActivity::MenuItem> EpubReaderMenuActivity::buildFullMenuItems(bool hasFootnotes) {
   std::vector<MenuItem> items;
   items.reserve(14);
+  items.push_back({MenuAction::BOLD_TEXT, StrId::STR_BOLD});
   items.push_back({MenuAction::LINE_SPACING, StrId::STR_LINE_SPACING});
   items.push_back({MenuAction::SCREEN_MARGIN, StrId::STR_SCREEN_MARGIN});
   items.push_back({MenuAction::ROTATE_SCREEN, StrId::STR_ORIENTATION});
@@ -150,11 +151,11 @@ void EpubReaderMenuActivity::loop() {
       requestUpdate();
       return;
     }
-    // Right = toggle bold text
+    // Right = open Thai dictionary
     if (mappedInput.wasReleased(MappedInputManager::Button::Right)) {
-      SETTINGS.readerBoldText = !SETTINGS.readerBoldText;
-      SETTINGS.saveToFile();
-      requestUpdate();
+      setResult(MenuResult{static_cast<int>(MenuAction::THAI_DICTIONARY), pendingOrientation, selectedPageTurnOption,
+                           pendingFontFamily, pendingFontSize, pendingLineSpacing, pendingScreenMargin});
+      finish();
       return;
     }
     // Confirm = enter full menu
@@ -190,6 +191,12 @@ void EpubReaderMenuActivity::loop() {
     if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
       const auto selectedAction = fullMenuItems[fullMenuSelectedIndex].action;
 
+      if (selectedAction == MenuAction::BOLD_TEXT) {
+        SETTINGS.readerBoldText = !SETTINGS.readerBoldText;
+        SETTINGS.saveToFile();
+        requestUpdate();
+        return;
+      }
       if (selectedAction == MenuAction::LINE_SPACING) {
         pendingLineSpacing = (pendingLineSpacing + 1) % CrossPointSettings::LINE_COMPRESSION_COUNT;
         requestUpdate();
@@ -260,7 +267,7 @@ void EpubReaderMenuActivity::render(RenderLock&&) {
 
   // Button hints
   if (currentMode == Mode::QUICK) {
-    const auto labels = mappedInput.mapLabels(tr(STR_BACK), "More >", "Dark Mode", "Bold");
+    const auto labels = mappedInput.mapLabels(tr(STR_BACK), "More >", "Dark Mode", "Dictionary");
     GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   } else {
     const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
@@ -402,16 +409,12 @@ void EpubReaderMenuActivity::renderQuickSettings(int x, int /*y*/, int w, int /*
                     boxX + (halfBoxW - renderer.getTextWidth(UI_12_FONT_ID, darkVal, EpdFontFamily::BOLD)) / 2,
                     dmMid - 2, darkVal, true, EpdFontFamily::BOLD);
 
-  // Bold box (right)
+  // Dictionary box (right)
   const int orBoxX = boxX + halfBoxW + 10;
   renderer.drawRoundedRect(orBoxX, dmY, halfBoxW, dmH, 1, radius, true);
   renderer.drawText(SMALL_FONT_ID,
-                    orBoxX + (halfBoxW - renderer.getTextWidth(SMALL_FONT_ID, "Bold")) / 2,
-                    dmMid - 22, "Bold", true);
-  const char* boldVal = SETTINGS.readerBoldText ? I18N.get(StrId::STR_STATE_ON) : I18N.get(StrId::STR_STATE_OFF);
-  renderer.drawText(UI_12_FONT_ID,
-                    orBoxX + (halfBoxW - renderer.getTextWidth(UI_12_FONT_ID, boldVal, EpdFontFamily::BOLD)) / 2,
-                    dmMid - 2, boldVal, true, EpdFontFamily::BOLD);
+                    orBoxX + (halfBoxW - renderer.getTextWidth(SMALL_FONT_ID, "Dictionary")) / 2,
+                    dmMid - 10, "Dictionary", true);
 
   // ══ Footer ══
   const char* moreHint = "More >";
@@ -485,6 +488,8 @@ const char* EpubReaderMenuActivity::getItemValue(MenuAction action) const {
       return numBuf;
     case MenuAction::DARK_MODE:
       return SETTINGS.readerDarkMode ? I18N.get(StrId::STR_STATE_ON) : I18N.get(StrId::STR_STATE_OFF);
+    case MenuAction::BOLD_TEXT:
+      return SETTINGS.readerBoldText ? I18N.get(StrId::STR_STATE_ON) : I18N.get(StrId::STR_STATE_OFF);
     case MenuAction::ROTATE_SCREEN:
       return I18N.get(orientationLabels[pendingOrientation]);
     case MenuAction::AUTO_PAGE_TURN:
