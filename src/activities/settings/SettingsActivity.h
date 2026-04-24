@@ -24,6 +24,7 @@ enum class SettingAction {
   CheckForUpdates,
   Language,
   ThaiDictionary,
+  SelectWallpaper,
 };
 
 struct SettingInfo {

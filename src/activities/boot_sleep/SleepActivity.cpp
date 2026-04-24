@@ -62,6 +62,42 @@ void SleepActivity::renderCustomSleepScreen() const {
     }
   }
 
+  // User-picked wallpaper takes priority: if SleepWallpaperPickerActivity saved
+  // a filename in customSleepImagePath, render that specific file every time
+  // instead of cycling through /sleep at random. Falls through to the random
+  // picker and then the default screen on any failure (missing dir, corrupt or
+  // missing BMP, invalid header), so a stale filename never bricks sleep mode.
+  if (sleepDir != nullptr && SETTINGS.customSleepImagePath[0] != '\0') {
+    const std::string filename = SETTINGS.customSleepImagePath;
+    // Defensive: reject anything that could traverse directories or isn't a BMP.
+    // The picker only writes bare filenames with .bmp, but settings can also be
+    // edited over the web API where the value is untrusted.
+    const bool validFilename = filename.find('/') == std::string::npos &&
+                               filename.find('\\') == std::string::npos && FsHelpers::hasBmpExtension(filename);
+    if (!validFilename) {
+      LOG_ERR("SLP", "Ignoring invalid custom sleep wallpaper path: %s", SETTINGS.customSleepImagePath);
+    } else {
+      const std::string pickedPath = std::string(sleepDir) + "/" + filename;
+      FsFile pickedFile;
+      if (Storage.openFileForRead("SLP", pickedPath, pickedFile)) {
+        Bitmap bitmap(pickedFile, true);
+        if (bitmap.parseHeaders() == BmpReaderError::Ok) {
+          LOG_DBG("SLP", "Loading user-picked wallpaper: %s", pickedPath.c_str());
+          renderBitmapSleepScreen(bitmap);
+          pickedFile.close();
+          if (dir) dir.close();
+          return;
+        }
+        LOG_ERR("SLP", "Picked wallpaper failed to parse as BMP: %s", pickedPath.c_str());
+        pickedFile.close();
+      } else {
+        LOG_ERR("SLP", "Picked wallpaper not found on SD: %s", pickedPath.c_str());
+      }
+    }
+    // Fall through to random-from-directory on failure so the user still sees
+    // something rather than the default boot screen.
+  }
+
   if (sleepDir) {
     std::vector<std::string> files;
     char name[500];

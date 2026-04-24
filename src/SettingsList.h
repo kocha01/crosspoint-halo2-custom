@@ -18,6 +18,12 @@ inline const std::vector<SettingInfo>& getSettingsList() {
                         {StrId::STR_DARK, StrId::STR_LIGHT, StrId::STR_CUSTOM, StrId::STR_COVER, StrId::STR_NONE_OPT,
                          StrId::STR_COVER_CUSTOM, StrId::STR_HALO_2_COVER},
                         "sleepScreen", StrId::STR_CAT_DISPLAY),
+      // customSleepImagePath lives in CAT_DISPLAY for JSON/web persistence only.
+      // The device settings UI filters it out (see SettingsActivity::onEnter)
+      // and uses the SelectWallpaper action row instead so users pick filenames
+      // from /sleep rather than typing them.
+      SettingInfo::String(StrId::STR_SELECT_WALLPAPER, SETTINGS.customSleepImagePath,
+                          sizeof(SETTINGS.customSleepImagePath), "customSleepImagePath", StrId::STR_CAT_DISPLAY),
       SettingInfo::Enum(StrId::STR_SLEEP_COVER_MODE, &CrossPointSettings::sleepScreenCoverMode,
                         {StrId::STR_FIT, StrId::STR_CROP}, "sleepScreenCoverMode", StrId::STR_CAT_DISPLAY),
       SettingInfo::Enum(StrId::STR_SLEEP_COVER_FILTER, &CrossPointSettings::sleepScreenCoverFilter,

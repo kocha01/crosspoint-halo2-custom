@@ -144,6 +144,9 @@ class CrossPointSettings {
 
   // Sleep screen settings
   uint8_t sleepScreen = DARK;
+  // Filename of custom sleep wallpaper inside /sleep/ (empty = no pick yet).
+  // Stored as filename only; SleepActivity prefixes "/sleep/" at render time.
+  char customSleepImagePath[64] = "";
   // Sleep screen cover mode settings
   uint8_t sleepScreenCoverMode = FIT;
   // Sleep screen cover filter

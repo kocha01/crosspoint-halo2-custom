@@ -12,6 +12,7 @@
 #include "MappedInputManager.h"
 #include "OtaUpdateActivity.h"
 #include "SettingsList.h"
+#include "SleepWallpaperPickerActivity.h"
 #include "StatusBarSettingsActivity.h"
 #include "ThaiDictionaryActivity.h"
 #include "activities/network/WifiSelectionActivity.h"
@@ -33,6 +34,12 @@ void SettingsActivity::onEnter() {
   for (const auto& setting : getSettingsList()) {
     if (setting.category == StrId::STR_NONE_OPT) continue;
     if (setting.category == StrId::STR_CAT_DISPLAY) {
+      // The customSleepImagePath STRING entry exists only for JSON/web persistence.
+      // The device UI surfaces it via a dedicated SelectWallpaper action row below
+      // so users pick filenames from /sleep instead of typing them.
+      if (setting.type == SettingType::STRING && setting.nameId == StrId::STR_SELECT_WALLPAPER) {
+        continue;
+      }
       displaySettings.push_back(setting);
     } else if (setting.category == StrId::STR_CAT_READER) {
       readerSettings.push_back(setting);
@@ -42,6 +49,17 @@ void SettingsActivity::onEnter() {
       systemSettings.push_back(setting);
     }
     // Web-only categories (KOReader Sync, OPDS Browser) are skipped for device UI
+  }
+
+  // Insert the Select Wallpaper action row directly after the Sleep Screen enum
+  // in the Display category so the picker sits with the setting that controls
+  // when the wallpaper is shown. If the Display category is empty (shouldn't
+  // happen post-init), fall back to a plain push.
+  if (displaySettings.empty()) {
+    displaySettings.push_back(SettingInfo::Action(StrId::STR_SELECT_WALLPAPER, SettingAction::SelectWallpaper));
+  } else {
+    displaySettings.insert(displaySettings.begin() + 1,
+                           SettingInfo::Action(StrId::STR_SELECT_WALLPAPER, SettingAction::SelectWallpaper));
   }
 
   // Append device-only ACTION items
@@ -207,6 +225,9 @@ void SettingsActivity::toggleCurrentSetting() {
       case SettingAction::ThaiDictionary:
         startActivityForResult(std::make_unique<ThaiDictionaryActivity>(renderer, mappedInput), resultHandler);
         break;
+      case SettingAction::SelectWallpaper:
+        startActivityForResult(std::make_unique<SleepWallpaperPickerActivity>(renderer, mappedInput), resultHandler);
+        break;
       case SettingAction::None:
         // Do nothing
         break;
@@ -257,6 +278,10 @@ void SettingsActivity::render(RenderLock&&) {
           valueText = I18N.get(setting.enumValues[value]);
         } else if (setting.type == SettingType::VALUE && setting.valuePtr != nullptr) {
           valueText = std::to_string(SETTINGS.*(setting.valuePtr));
+        } else if (setting.type == SettingType::ACTION && setting.action == SettingAction::SelectWallpaper) {
+          // Preview the filename so users can see what's currently set without
+          // opening the picker. Empty path → "Not set" (i18n) hint.
+          valueText = SETTINGS.customSleepImagePath[0] != '\0' ? SETTINGS.customSleepImagePath : tr(STR_NOT_SET);
         }
         return valueText;
       },
