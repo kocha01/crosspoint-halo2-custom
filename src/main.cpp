@@ -26,6 +26,7 @@
 #include "activities/ActivityManager.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
+#include "network/UpdateCheckTask.h"
 #include "util/ButtonNavigator.h"
 #include "util/ScreenshotUtil.h"
 
@@ -379,6 +380,12 @@ void setup() {
 
   APP_STATE.loadFromFile();
   RECENT_BOOKS.loadFromFile();
+
+  // Kick off the background update check as early as possible so the popup can appear
+  // regardless of whether we boot into Home or straight into Reader (wake-from-reader path).
+  // UpdateCheckTask is idempotent and guarded by APP_STATE.updateCheckStarted, so calling
+  // it here and again from HomeActivity::onEnter() is safe.
+  UpdateCheckTask::start();
 
   // Boot to home screen if no book is open, last sleep was not from reader, back button is held, or reader activity
   // crashed (indicated by readerActivityLoadCount > 0)
