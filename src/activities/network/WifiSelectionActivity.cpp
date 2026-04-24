@@ -16,6 +16,14 @@
 void WifiSelectionActivity::onEnter() {
   Activity::onEnter();
 
+  // Capture any pre-existing WiFi association BEFORE we touch the radio.
+  // startWifiScan() calls WiFi.disconnect(), which drops WiFi.SSID() — so we
+  // must record it here to mark the matching row as "Connected" later.
+  currentlyConnectedSsid.clear();
+  if (WiFi.status() == WL_CONNECTED) {
+    currentlyConnectedSsid = WiFi.SSID().c_str();
+  }
+
   // Load saved WiFi credentials - SD card operations need lock as we use SPI
   // for both
   {
@@ -138,6 +146,7 @@ void WifiSelectionActivity::processWifiScanResults() {
       network.rssi = rssi;
       network.isEncrypted = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
       network.hasSavedPassword = WIFI_STORE.hasSavedCredential(network.ssid);
+      network.isCurrentlyConnected = !currentlyConnectedSsid.empty() && ssid == currentlyConnectedSsid;
       uniqueNetworks[ssid] = network;
     }
   }
@@ -149,8 +158,11 @@ void WifiSelectionActivity::processWifiScanResults() {
     networks.push_back(pair.second);
   }
 
-  // Sort: saved-password networks first, then by signal strength (strongest first)
+  // Sort: currently-connected first, then saved-password, then by signal strength
   std::sort(networks.begin(), networks.end(), [](const WifiNetworkInfo& a, const WifiNetworkInfo& b) {
+    if (a.isCurrentlyConnected != b.isCurrentlyConnected) {
+      return a.isCurrentlyConnected;
+    }
     if (a.hasSavedPassword != b.hasSavedPassword) {
       return a.hasSavedPassword;
     }
@@ -532,9 +544,16 @@ void WifiSelectionActivity::renderNetworkList() const {
         selectedNetworkIndex, [this](int index) { return networks[index].ssid; }, nullptr, nullptr,
         [this](int index) {
           auto network = networks[index];
+          // Currently-connected network gets a clear "Connected!" badge on the right,
+          // which becomes an inverted pill when the row is selected (highlightValue=true).
+          // This is what the user sees at a glance to tell which AP is live vs just saved.
+          if (network.isCurrentlyConnected) {
+            return std::string(tr(STR_CONNECTED));
+          }
           return std::string(network.hasSavedPassword ? "+ " : "") + (network.isEncrypted ? "* " : "") +
                  getSignalStrengthIndicator(network.rssi);
-        });
+        },
+        /*highlightValue=*/true);
   }
 
   GUI.drawHelpText(renderer,

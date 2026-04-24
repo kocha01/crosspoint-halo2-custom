@@ -15,6 +15,7 @@ struct WifiNetworkInfo {
   int32_t rssi;
   bool isEncrypted;
   bool hasSavedPassword;  // Whether we have saved credentials for this network
+  bool isCurrentlyConnected = false;  // Whether WiFi is currently associated with this SSID
   std::string ipAddress;  // Populated after connection for display
 };
 
@@ -62,6 +63,11 @@ class WifiSelectionActivity final : public Activity {
 
   // Cached MAC address string for display
   std::string cachedMacAddress;
+
+  // SSID WiFi was already connected to when this activity opened. Captured at the
+  // very start of onEnter() before any scan-triggered WiFi.disconnect() wipes it,
+  // so we can mark the matching row in the network list as "Connected".
+  std::string currentlyConnectedSsid;
 
   // Whether network was connected using a saved password (skip save prompt)
   bool usedSavedPassword = false;
