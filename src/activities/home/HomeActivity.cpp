@@ -16,8 +16,11 @@
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
+#include "UpdateAvailablePopupActivity.h"
+#include "activities/settings/OtaUpdateActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
+#include "network/UpdateCheckTask.h"
 
 int HomeActivity::getMenuItemCount() const {
   int count = 4;  // File Browser, Recents, File transfer, Settings
@@ -156,6 +159,13 @@ void HomeActivity::onEnter() {
   // Generate any missing cover thumbnails BEFORE the first render
   loadRecentCovers(metrics.homeCoverHeight);
 
+  // Kick off background update check (silent; no-op if already ran this boot)
+  UpdateCheckTask::start();
+
+  // Reset per-entry popup guard so a newly finished check can still prompt
+  // even if HomeActivity was re-entered from a sub-activity.
+  updatePopupShown = false;
+
   // Trigger single update — render() uses fast refresh for minimal flicker
   requestUpdate();
 }
@@ -209,7 +219,39 @@ void HomeActivity::freeCoverBuffer() {
   coverBufferStored = false;
 }
 
+void HomeActivity::maybeShowUpdatePopup() {
+  // Bail early on any condition that should suppress the popup.
+  if (updatePopupShown) return;
+  if (!APP_STATE.updateAvailable) return;
+  if (APP_STATE.updateDismissed) return;
+  if (APP_STATE.latestVersion.empty()) return;
+
+  updatePopupShown = true;
+  const std::string latest = APP_STATE.latestVersion;
+
+  startActivityForResult(
+      std::make_unique<UpdateAvailablePopupActivity>(renderer, mappedInput, latest),
+      [this](const ActivityResult& result) {
+        if (result.isCancelled) {
+          // User tapped "Later" — suppress popup for the rest of this boot.
+          APP_STATE.updateDismissed = true;
+          requestUpdate();
+        } else {
+          // "Update Now" — jump into the standard OTA flow.
+          // OtaUpdateActivity handles its own WiFi re-connection through
+          // WifiSelectionActivity (with auto-connect), so we don't need
+          // to re-use the credentials the background task used.
+          APP_STATE.updateDismissed = true;  // Don't re-prompt if user backs out of OTA
+          startActivityForResult(std::make_unique<OtaUpdateActivity>(renderer, mappedInput),
+                                 [this](const ActivityResult&) { requestUpdate(); });
+        }
+      });
+}
+
 void HomeActivity::loop() {
+  // Check for pending update notification before handling any other input
+  maybeShowUpdatePopup();
+
   const int bookCount = static_cast<int>(recentBooks.size());
   const int menuItemCount = getMenuItemCount() - bookCount;
   const int totalSelectableCount = bookCount + menuItemCount;

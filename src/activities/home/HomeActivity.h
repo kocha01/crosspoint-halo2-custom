@@ -19,6 +19,7 @@ class HomeActivity final : public Activity {
   bool hasOpdsUrl = false;
   bool coverRendered = false;      // Track if cover has been rendered once
   bool coverBufferStored = false;  // Track if cover buffer is stored
+  bool updatePopupShown = false;   // Popup launched (prevents repeat spawns in same onEnter)
   uint8_t* coverBuffer = nullptr;  // HomeActivity's own buffer for cover image
   std::vector<RecentBook> recentBooks;
   void onSelectBook(const std::string& path);
@@ -27,6 +28,7 @@ class HomeActivity final : public Activity {
   void onSettingsOpen();
   void onFileTransferOpen();
   void onOpdsBrowserOpen();
+  void maybeShowUpdatePopup();
 
   int getMenuItemCount() const;
   bool storeCoverBuffer();    // Store frame buffer for cover image
