@@ -7,10 +7,16 @@
 #include <string>
 
 class FontDecompressor;
+class SdCardFont;
 
 class FontCacheManager {
  public:
-  explicit FontCacheManager(const std::map<int, EpdFontFamily>& fontMap);
+  // sdCardFonts is a reference to GfxRenderer::sdCardFonts_ — the registry of
+  // SD-resident fonts.  When the scan pass picks up a fontId in this map,
+  // prewarmCache() routes to SdCardFont::prewarm() (with bitmaps) instead of
+  // FontDecompressor.  Empty map is fine — SD font support is optional.
+  FontCacheManager(const std::map<int, EpdFontFamily>& fontMap,
+                   const std::map<int, SdCardFont*>& sdCardFonts);
 
   void setFontDecompressor(FontDecompressor* d);
 
@@ -45,6 +51,7 @@ class FontCacheManager {
 
  private:
   const std::map<int, EpdFontFamily>& fontMap_;
+  const std::map<int, SdCardFont*>& sdCardFonts_;
   FontDecompressor* fontDecompressor_ = nullptr;
 
   enum class ScanMode : uint8_t { None, Scanning };

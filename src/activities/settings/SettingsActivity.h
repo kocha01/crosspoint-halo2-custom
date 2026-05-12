@@ -25,6 +25,7 @@ enum class SettingAction {
   Language,
   ThaiDictionary,
   SelectWallpaper,
+  SelectSdFont,
 };
 
 struct SettingInfo {

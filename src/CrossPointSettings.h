@@ -179,6 +179,16 @@ class CrossPointSettings {
   // Reader font settings
   uint8_t fontFamily = BAIJAMJUREE;
   uint8_t fontSize = FONT_14;
+  // SD card font family name (empty = use built-in fontFamily). When non-empty,
+  // getReaderFontId() resolves the SD font ID via sdFontIdResolver instead of
+  // using the BAIJAMJUREE/CLOUDLOOP/BOOKERLY switch.  Persisted to JSON.
+  char sdFontFamilyName[32] = "";
+  // Resolver trampoline — set by SdCardFontSystem::begin() so this header
+  // doesn't need to know about that subsystem.  Returns 0 if the family isn't
+  // present on the SD card (caller falls back to built-in font).
+  using SdFontIdResolver = int (*)(void* ctx, const char* familyName, uint8_t fontSize);
+  SdFontIdResolver sdFontIdResolver = nullptr;
+  void* sdFontResolverCtx = nullptr;
   uint8_t lineSpacing = NORMAL;
   uint8_t paragraphAlignment = JUSTIFIED;
   // Auto-sleep timeout setting (default 10 minutes)

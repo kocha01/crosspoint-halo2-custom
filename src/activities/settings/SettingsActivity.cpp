@@ -11,6 +11,7 @@
 #include "LanguageSelectActivity.h"
 #include "MappedInputManager.h"
 #include "OtaUpdateActivity.h"
+#include "SdCardFontPickerActivity.h"
 #include "SettingsList.h"
 #include "SleepWallpaperPickerActivity.h"
 #include "StatusBarSettingsActivity.h"
@@ -42,6 +43,12 @@ void SettingsActivity::onEnter() {
       }
       displaySettings.push_back(setting);
     } else if (setting.category == StrId::STR_CAT_READER) {
+      // sdFontFamilyName STRING exists only for JSON/web persistence — the
+      // device UI surfaces it via the SelectSdFont action row below so users
+      // pick from discovered families instead of typing.
+      if (setting.type == SettingType::STRING && setting.nameId == StrId::STR_SD_FONT) {
+        continue;
+      }
       readerSettings.push_back(setting);
     } else if (setting.category == StrId::STR_CAT_CONTROLS) {
       controlsSettings.push_back(setting);
@@ -73,6 +80,10 @@ void SettingsActivity::onEnter() {
   systemSettings.push_back(SettingInfo::Action(StrId::STR_LANGUAGE, SettingAction::Language));
   readerSettings.push_back(SettingInfo::Action(StrId::STR_CUSTOMISE_STATUS_BAR, SettingAction::CustomiseStatusBar));
   readerSettings.push_back(SettingInfo::Action(StrId::STR_THAI_DICTIONARY, SettingAction::ThaiDictionary));
+  // SD card font picker — surfaces /fonts/<Family>/<Family>_<size>.cpfont
+  // discovered families. Selecting "Default" clears SETTINGS.sdFontFamilyName
+  // so the reader falls back to the built-in font enum.
+  readerSettings.push_back(SettingInfo::Action(StrId::STR_SD_FONT, SettingAction::SelectSdFont));
 
   // Reset selection to first category
   selectedCategoryIndex = 0;
@@ -228,6 +239,9 @@ void SettingsActivity::toggleCurrentSetting() {
       case SettingAction::SelectWallpaper:
         startActivityForResult(std::make_unique<SleepWallpaperPickerActivity>(renderer, mappedInput), resultHandler);
         break;
+      case SettingAction::SelectSdFont:
+        startActivityForResult(std::make_unique<SdCardFontPickerActivity>(renderer, mappedInput), resultHandler);
+        break;
       case SettingAction::None:
         // Do nothing
         break;
@@ -282,6 +296,9 @@ void SettingsActivity::render(RenderLock&&) {
           // Preview the filename so users can see what's currently set without
           // opening the picker. Empty path → "Not set" (i18n) hint.
           valueText = SETTINGS.customSleepImagePath[0] != '\0' ? SETTINGS.customSleepImagePath : tr(STR_NOT_SET);
+        } else if (setting.type == SettingType::ACTION && setting.action == SettingAction::SelectSdFont) {
+          // Display current SD font family name (or "Default" when none is set).
+          valueText = SETTINGS.sdFontFamilyName[0] != '\0' ? SETTINGS.sdFontFamilyName : tr(STR_DEFAULT_VALUE);
         }
         return valueText;
       },

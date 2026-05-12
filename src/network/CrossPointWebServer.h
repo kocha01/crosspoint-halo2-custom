@@ -48,6 +48,10 @@ class CrossPointWebServer {
     UploadState() { buffer.resize(UPLOAD_BUFFER_SIZE); }
   } upload;
 
+  // Separate UploadState for the SD font drop-zone endpoint so a concurrent
+  // book upload doesn't clobber the font upload's state (and vice versa).
+  UploadState fontUpload;
+
   CrossPointWebServer();
   ~CrossPointWebServer();
 
@@ -96,6 +100,20 @@ class CrossPointWebServer {
   void handleDownload() const;
   void handleUpload(UploadState& state) const;
   void handleUploadPost(UploadState& state) const;
+
+  // SD card font upload — drop a `.cpfont` file and the server auto-creates
+  // /fonts/<Family>/ from the parsed filename, writes the file, then triggers
+  // SdCardFontRegistry::discover() so the new family appears in Settings
+  // without requiring a reboot or SD-card eject.  Filename must match the
+  // v4 naming convention `<Family>_<size>.cpfont` (e.g. Lexend_18.cpfont).
+  void handleFontUpload(UploadState& state) const;
+  void handleFontUploadPost(UploadState& state) const;
+  void handleFontList() const;
+  // DELETE /api/fonts/delete?family=<name> — removes the entire family
+  // directory under /fonts/<name>/ (and the legacy /.crosspoint/fonts/<name>/
+  // if present), then triggers a registry rescan.
+  void handleFontDelete() const;
+
   void handleCreateFolder() const;
   void handleRename() const;
   void handleMove() const;

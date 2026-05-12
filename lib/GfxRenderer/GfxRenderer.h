@@ -4,6 +4,7 @@
 #include <HalDisplay.h>
 
 class FontCacheManager;
+class SdCardFont;
 
 #include <cstring>
 #include <map>
@@ -41,6 +42,11 @@ class GfxRenderer {
   uint8_t* frameBuffer = nullptr;
   uint8_t* bwBufferChunks[BW_BUFFER_NUM_CHUNKS] = {nullptr};
   std::map<int, EpdFontFamily> fontMap;
+
+  // SD card fonts registry: fontId -> SdCardFont*. Mutable because layout code
+  // calls ensureSdCardFontReady() through a const GfxRenderer&, but the
+  // SdCardFont it dispatches to mutates internal mini-cache state.
+  mutable std::map<int, SdCardFont*> sdCardFonts_;
 
   // Mutable because drawText() is const but needs to delegate scan-mode
   // recording to the (non-const) FontCacheManager. Same pragmatic compromise
@@ -85,6 +91,18 @@ class GfxRenderer {
   // Setup
   void begin();  // must be called right after display.begin()
   void insertFont(int fontId, EpdFontFamily font);
+  void removeFont(int fontId) { fontMap.erase(fontId); }
+  // SD card font registry — tracks which fontIds are backed by .cpfont files on
+  // SD so the glyphMiss / overflow paths can find their owning SdCardFont*.
+  void registerSdCardFont(int fontId, SdCardFont* font) { sdCardFonts_[fontId] = font; }
+  void unregisterSdCardFont(int fontId) { sdCardFonts_.erase(fontId); }
+  void clearSdCardFonts() { sdCardFonts_.clear(); }
+  const std::map<int, SdCardFont*>& getSdCardFonts() const { return sdCardFonts_; }
+  bool isSdCardFont(int fontId) const { return sdCardFonts_.count(fontId) > 0; }
+  // Layout-time hook: ensure the SD-resident font for `fontId` has metadata
+  // (glyph metrics) loaded for the given UTF-8 text.  No-op for non-SD fonts.
+  // Called from ParsedText layout before measuring word widths.
+  void ensureSdCardFontReady(int fontId, const char* utf8Text) const;
   void setFontCacheManager(FontCacheManager* m) { fontCacheManager_ = m; }
   FontCacheManager* getFontCacheManager() const { return fontCacheManager_; }
   const std::map<int, EpdFontFamily>& getFontMap() const { return fontMap; }

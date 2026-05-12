@@ -2,6 +2,7 @@
 
 #include <FontDecompressor.h>
 #include <Logging.h>
+#include <SdCardFont.h>
 #include <Utf8.h>
 
 #include <limits>
@@ -21,7 +22,28 @@ const uint8_t* GfxRenderer::getGlyphBitmap(const EpdFontData* fontData, const Ep
     // must consume it (draw the glyph) before requesting another bitmap.
     return fd->getBitmap(fontData, glyph, glyphIndex);
   }
+  // SD card fonts: glyphMissHandler may have populated the overflow ring buffer
+  // with on-demand glyphs whose bitmap pointer is NOT inside fontData->bitmap.
+  // Detect via isOverflowGlyph() and route the bitmap fetch through SdCardFont.
+  if (fontData->glyphMissCtx) {
+    auto* sdFont = SdCardFont::fromMissCtx(fontData->glyphMissCtx);
+    if (sdFont->isOverflowGlyph(glyph)) {
+      return sdFont->getOverflowBitmap(glyph);  // may be nullptr for zero-width glyphs
+    }
+  }
   return &fontData->bitmap[glyph->dataOffset];
+}
+
+void GfxRenderer::ensureSdCardFontReady(int fontId, const char* utf8Text) const {
+  auto it = sdCardFonts_.find(fontId);
+  if (it != sdCardFonts_.end()) {
+    // Metadata-only: loads glyph metrics (advanceX) without bitmap data.
+    // Saves ~50-100KB heap vs full prewarm — layout only needs advance widths.
+    int missed = it->second->prewarm(utf8Text, 0x0F, /*metadataOnly=*/true);
+    if (missed > 0) {
+      LOG_DBG("GFX", "ensureSdCardFontReady: %d glyph(s) not found", missed);
+    }
+  }
 }
 
 void GfxRenderer::begin() {

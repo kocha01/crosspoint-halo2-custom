@@ -52,6 +52,12 @@ inline const std::vector<SettingInfo>& getSettingsList() {
                          {CrossPointSettings::FONT_SIZE_MIN, CrossPointSettings::FONT_SIZE_MAX,
                           CrossPointSettings::FONT_SIZE_STEP},
                          "fontSize", StrId::STR_CAT_READER),
+      // sdFontFamilyName is registered as a SettingInfo::String purely to wire
+      // up JSON persistence and the web UI string field.  The device UI uses a
+      // dedicated SelectSdFont action row to launch the picker (see
+      // SettingsActivity::onEnter), so this String entry never renders as a row.
+      SettingInfo::String(StrId::STR_SD_FONT, SETTINGS.sdFontFamilyName,
+                          sizeof(SETTINGS.sdFontFamilyName), "sdFontFamilyName", StrId::STR_CAT_READER),
       SettingInfo::Enum(StrId::STR_LINE_SPACING, &CrossPointSettings::lineSpacing,
                         {StrId::STR_TIGHT, StrId::STR_NORMAL, StrId::STR_WIDE}, "lineSpacing", StrId::STR_CAT_READER),
       SettingInfo::Value(StrId::STR_SCREEN_MARGIN, &CrossPointSettings::screenMargin, {5, 40, 5}, "screenMargin",

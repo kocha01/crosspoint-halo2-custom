@@ -326,6 +326,15 @@ int CrossPointSettings::getRefreshFrequency() const {
 }
 
 int CrossPointSettings::getReaderFontId() const {
+  // SD-first: if a custom font family is selected and the resolver is wired up,
+  // ask it for an ID.  Resolver returns 0 when the family isn't present (e.g.
+  // user removed the SD card or deleted the font), in which case fall through
+  // to the built-in switch below so reading keeps working.
+  if (sdFontFamilyName[0] != '\0' && sdFontIdResolver) {
+    int id = sdFontIdResolver(sdFontResolverCtx, sdFontFamilyName, fontSize);
+    if (id > 0) return id;
+  }
+
   switch (fontFamily) {
     case BAIJAMJUREE:
     default:

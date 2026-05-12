@@ -11,6 +11,7 @@
 #include <I18n.h>
 #include <Logging.h>
 #include <SPI.h>
+#include <SdCardFontSystem.h>
 #include <builtinFonts/all.h>
 
 #include <cstring>
@@ -36,7 +37,14 @@ MappedInputManager mappedInputManager(gpio);
 GfxRenderer renderer(display);
 ActivityManager activityManager(renderer, mappedInputManager);
 FontDecompressor fontDecompressor;
-FontCacheManager fontCacheManager(renderer.getFontMap());
+FontCacheManager fontCacheManager(renderer.getFontMap(), renderer.getSdCardFonts());
+
+// SD card font system — discovers .cpfont files under /fonts/<Family>/ and
+// loads the user's chosen family.  Defined here so SdCardFontGlobals.h's
+// `extern` declarations resolve, and so `ensureSdFontLoaded()` (called from
+// the reader entry path) has a stable target.
+SdCardFontSystem sdFontSystem;
+void ensureSdFontLoaded() { sdFontSystem.ensureLoaded(renderer); }
 
 // Fonts
 EpdFont smallFont(&baijamjuree_8_regular);
@@ -339,6 +347,12 @@ void setup() {
   KOREADER_STORE.loadFromFile();
   UITheme::getInstance().reload();
   ButtonNavigator::setMappedInputManager(mappedInputManager);
+
+  // Discover SD card .cpfont families and load the user's selected one (if any).
+  // Must come after SETTINGS.loadFromFile() so sdFontFamilyName is populated.
+  // Installs the SdFontIdResolver trampoline so SETTINGS.getReaderFontId() can
+  // resolve SD font IDs at render time.
+  sdFontSystem.begin(renderer);
 
   // Load optional Thai user dictionary from SD card (non-blocking, silently skips if absent)
   loadThaiUserDictionary();

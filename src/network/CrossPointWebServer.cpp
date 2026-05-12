@@ -11,9 +11,11 @@
 #include <algorithm>
 
 #include "CrossPointSettings.h"
+#include "SdCardFontGlobals.h"
 #include "SettingsList.h"
 #include "WebDAVHandler.h"
 #include "html/FilesPageHtml.generated.h"
+#include "html/FontsPageHtml.generated.h"
 #include "html/HomePageHtml.generated.h"
 #include "html/SettingsPageHtml.generated.h"
 
@@ -79,6 +81,10 @@ bool isProtectedItemName(const String& name) {
   return false;
 }
 }  // namespace
+
+// Forward declaration so the `/fonts` route lambda in begin() can reference
+// this helper, which is defined later in the file (~line 320).
+static void sendHtmlContent(WebServer* server, const char* data, size_t len);
 
 // File listing page template - now using generated headers:
 // - HomePageHtml (from html/HomePage.html)
@@ -155,6 +161,18 @@ void CrossPointWebServer::begin() {
   server->on("/settings", HTTP_GET, [this] { handleSettingsPage(); });
   server->on("/api/settings", HTTP_GET, [this] { handleGetSettings(); });
   server->on("/api/settings", HTTP_POST, [this] { handlePostSettings(); });
+
+  // SD card font upload — drop-zone web UI + multipart upload endpoint. The
+  // server auto-routes uploaded `.cpfont` files to /fonts/<Family>/ based on
+  // the parsed filename. Pairs with /api/fonts/list (registry snapshot) and
+  // /api/fonts/delete (remove a family directory).
+  server->on("/fonts", HTTP_GET,
+             [this] { sendHtmlContent(server.get(), FontsPageHtml, sizeof(FontsPageHtml)); });
+  server->on(
+      "/api/fonts/upload", HTTP_POST, [this] { handleFontUploadPost(fontUpload); },
+      [this] { handleFontUpload(fontUpload); });
+  server->on("/api/fonts/list", HTTP_GET, [this] { handleFontList(); });
+  server->on("/api/fonts/delete", HTTP_POST, [this] { handleFontDelete(); });
 
   server->onNotFound([this] { handleNotFound(); });
   LOG_DBG("WEB", "[MEM] Free heap after route setup: %d bytes", ESP.getFreeHeap());
@@ -1333,4 +1351,241 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
     default:
       break;
   }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// SD card font upload
+//
+// Endpoints:
+//   GET  /fonts             — drop-zone web UI (FontsPage.html)
+//   POST /api/fonts/upload  — multipart upload, filename = <Family>_<size>.cpfont
+//   GET  /api/fonts/list    — JSON of discovered families + sizes + selection
+//   POST /api/fonts/delete  — ?family=<name> removes the entire family dir
+//
+// Filename convention: `<Family>_<size>.cpfont` (e.g. PKNakhonSawan_18.cpfont).
+// The server parses the family name, mkdir's `/fonts/<Family>/` if needed, and
+// writes the file there.  Mirrors the SdCardFontRegistry's discover layout
+// exactly, so re-running discover() after upload picks up the new family.
+// ────────────────────────────────────────────────────────────────────────────
+
+namespace {
+// Validate + parse a .cpfont filename like "PKNakhonSawan_18.cpfont".
+// On success: outFamily = "PKNakhonSawan", outSize = 18, returns true.
+// On failure (wrong extension, missing underscore, non-numeric size): false.
+bool parseFontFilename(const String& filename, String& outFamily, uint8_t& outSize) {
+  if (!filename.endsWith(".cpfont")) return false;
+  const int extDot = filename.lastIndexOf(".cpfont");
+  if (extDot <= 0) return false;
+  const int lastUnderscore = filename.lastIndexOf('_', extDot);
+  if (lastUnderscore <= 0 || lastUnderscore >= extDot - 1) return false;
+
+  outFamily = filename.substring(0, lastUnderscore);
+  const String sizeStr = filename.substring(lastUnderscore + 1, extDot);
+  const long sizeVal = sizeStr.toInt();
+  if (sizeVal < 1 || sizeVal > 255 || sizeStr.length() == 0) return false;
+
+  // toInt returns 0 for non-numeric — guard against "_abc.cpfont"
+  for (size_t i = 0; i < sizeStr.length(); i++) {
+    if (sizeStr[i] < '0' || sizeStr[i] > '9') return false;
+  }
+
+  outSize = static_cast<uint8_t>(sizeVal);
+  if (outFamily.length() == 0 || outFamily.length() > 31) return false;  // family name fits in SETTINGS field
+  return true;
+}
+}  // namespace
+
+void CrossPointWebServer::handleFontUpload(UploadState& state) const {
+  esp_task_wdt_reset();
+  if (!running || !server) return;
+
+  const HTTPUpload& upload = server->upload();
+
+  if (upload.status == UPLOAD_FILE_START) {
+    esp_task_wdt_reset();
+    state.fileName = upload.filename;
+    state.size = 0;
+    state.success = false;
+    state.error = "";
+    state.bufferPos = 0;
+
+    // Parse filename to derive target family directory.
+    String family;
+    uint8_t pointSize = 0;
+    if (!parseFontFilename(state.fileName, family, pointSize)) {
+      state.error = "Filename must be <Family>_<size>.cpfont (e.g. Lexend_16.cpfont)";
+      LOG_ERR("WEB", "[FONT] Bad filename: %s", state.fileName.c_str());
+      return;
+    }
+
+    // Ensure /fonts/ and /fonts/<Family>/ exist.
+    Storage.mkdir("/fonts");
+    String familyDir = String("/fonts/") + family;
+    Storage.mkdir(familyDir.c_str());
+    state.path = familyDir;
+
+    // Build full target path and overwrite if present.
+    String filePath = state.path + "/" + state.fileName;
+    if (Storage.exists(filePath.c_str())) {
+      LOG_DBG("WEB", "[FONT] Overwriting %s", filePath.c_str());
+      Storage.remove(filePath.c_str());
+    }
+
+    if (!Storage.openFileForWrite("WEB", filePath, state.file)) {
+      state.error = "Failed to create font file on SD card";
+      LOG_ERR("WEB", "[FONT] open failed: %s", filePath.c_str());
+      return;
+    }
+    LOG_DBG("WEB", "[FONT] Upload start: %s (family=%s, size=%u)", filePath.c_str(), family.c_str(),
+            static_cast<unsigned>(pointSize));
+  } else if (upload.status == UPLOAD_FILE_WRITE) {
+    if (state.file && state.error.isEmpty()) {
+      const uint8_t* data = upload.buf;
+      size_t remaining = upload.currentSize;
+      while (remaining > 0) {
+        const size_t space = UploadState::UPLOAD_BUFFER_SIZE - state.bufferPos;
+        const size_t toCopy = remaining < space ? remaining : space;
+        memcpy(state.buffer.data() + state.bufferPos, data, toCopy);
+        state.bufferPos += toCopy;
+        data += toCopy;
+        remaining -= toCopy;
+        state.size += toCopy;
+        if (state.bufferPos >= UploadState::UPLOAD_BUFFER_SIZE) {
+          if (!flushUploadBuffer(state)) return;
+        }
+      }
+    }
+  } else if (upload.status == UPLOAD_FILE_END) {
+    if (state.file && state.error.isEmpty()) {
+      if (!flushUploadBuffer(state)) return;
+      state.file.close();
+      state.success = true;
+      LOG_DBG("WEB", "[FONT] Upload complete: %s (%u bytes)", state.fileName.c_str(),
+              static_cast<unsigned>(state.size));
+    }
+  } else if (upload.status == UPLOAD_FILE_ABORTED) {
+    if (state.file) {
+      state.file.close();
+      String filePath = state.path + "/" + state.fileName;
+      Storage.remove(filePath.c_str());
+    }
+    state.error = "Upload aborted";
+  }
+}
+
+void CrossPointWebServer::handleFontUploadPost(UploadState& state) const {
+  if (!state.success) {
+    const String error = state.error.isEmpty() ? "Unknown error during font upload" : state.error;
+    server->send(400, "text/plain", error);
+    return;
+  }
+
+  // Re-scan the registry so the new file appears in Settings → Custom Font (SD)
+  // without a reboot or SD eject.  rediscover() is fast — just a directory walk
+  // over /fonts and /.crosspoint/fonts, no file I/O for glyph data.
+  sdFontSystem.rediscover();
+  // If the user already has this family selected, ensureLoaded picks the closest
+  // .cpfont file (which may have just changed if they uploaded a new size).
+  ensureSdFontLoaded();
+
+  String family;
+  uint8_t pointSize = 0;
+  parseFontFilename(state.fileName, family, pointSize);
+
+  String json = "{\"success\":true,\"family\":\"";
+  json += family;
+  json += "\",\"size\":";
+  json += String(static_cast<unsigned>(pointSize));
+  json += ",\"path\":\"";
+  json += state.path + "/" + state.fileName;
+  json += "\",\"familiesDiscovered\":";
+  json += String(sdFontSystem.registry().getFamilyCount());
+  json += "}";
+  server->send(200, "application/json", json);
+}
+
+void CrossPointWebServer::handleFontDelete() const {
+  if (!server->hasArg("family")) {
+    server->send(400, "text/plain", "Missing 'family' parameter");
+    return;
+  }
+
+  const String family = server->arg("family");
+  if (family.isEmpty() || family.length() > 31) {
+    server->send(400, "text/plain", "Invalid family name");
+    return;
+  }
+  // Reject path-traversal attempts.  Family names are pure directory names —
+  // no slashes, no leading dots that would escape into hidden system paths.
+  if (family.indexOf('/') >= 0 || family.indexOf('\\') >= 0 || family.startsWith(".")) {
+    server->send(400, "text/plain", "Invalid family name");
+    return;
+  }
+
+  // Try both the visible and legacy paths; succeed if either is removed.
+  bool removed = false;
+  String visiblePath = String("/fonts/") + family;
+  String legacyPath = String("/.crosspoint/fonts/") + family;
+  if (Storage.exists(visiblePath.c_str())) {
+    if (Storage.removeDir(visiblePath.c_str())) {
+      LOG_DBG("WEB", "[FONT] Deleted %s", visiblePath.c_str());
+      removed = true;
+    }
+  }
+  if (Storage.exists(legacyPath.c_str())) {
+    if (Storage.removeDir(legacyPath.c_str())) {
+      LOG_DBG("WEB", "[FONT] Deleted %s", legacyPath.c_str());
+      removed = true;
+    }
+  }
+
+  if (!removed) {
+    server->send(404, "text/plain", "Family not found or could not be removed");
+    return;
+  }
+
+  // If the deleted family was the user's current selection, clear it so the
+  // reader cleanly falls back to the built-in fontFamily.
+  if (strcmp(SETTINGS.sdFontFamilyName, family.c_str()) == 0) {
+    SETTINGS.sdFontFamilyName[0] = '\0';
+    SETTINGS.saveToFile();
+  }
+  // Refresh the registry + reload current selection so Settings UI picks up
+  // the change immediately.
+  sdFontSystem.rediscover();
+  ensureSdFontLoaded();
+
+  String json = "{\"success\":true,\"family\":\"";
+  json += family;
+  json += "\",\"familiesDiscovered\":";
+  json += String(sdFontSystem.registry().getFamilyCount());
+  json += "}";
+  server->send(200, "application/json", json);
+}
+
+void CrossPointWebServer::handleFontList() const {
+  // JSON shape:
+  //   { "families": [
+  //       { "name": "PKNakhonSawan", "sizes": [18, 20, 22, 24, 26] },
+  //       ...
+  //     ],
+  //     "selected": "PKNakhonSawan"  // empty string if using built-in
+  //   }
+  String json = "{\"families\":[";
+  const auto& families = sdFontSystem.registry().getFamilies();
+  for (size_t i = 0; i < families.size(); i++) {
+    const auto& family = families[i];
+    if (i > 0) json += ",";
+    json += "{\"name\":\"" + String(family.name.c_str()) + "\",\"sizes\":[";
+    auto sizes = family.availableSizes();
+    for (size_t s = 0; s < sizes.size(); s++) {
+      if (s > 0) json += ",";
+      json += String(static_cast<unsigned>(sizes[s]));
+    }
+    json += "]}";
+  }
+  json += "],\"selected\":\"";
+  json += SETTINGS.sdFontFamilyName;
+  json += "\"}";
+  server->send(200, "application/json", json);
 }

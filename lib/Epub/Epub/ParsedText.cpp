@@ -260,6 +260,23 @@ void ParsedText::layoutAndExtractLines(const GfxRenderer& renderer, const int fo
   // Apply fixed transforms before any per-line layout work.
   applyParagraphIndent();
 
+  // SD card font prewarm: read glyph metadata (advanceX only — no bitmaps) for
+  // every codepoint in this paragraph before measurement.  Without this every
+  // word width call would trigger a SD-read for missing glyphs.  No-op for
+  // built-in (Flash-resident) fonts.
+  if (renderer.isSdCardFont(fontId)) {
+    size_t totalSize = 0;
+    if (!words.empty()) totalSize += words.size() - 1;  // inter-word spaces
+    for (const auto& w : words) totalSize += w.size();
+    std::string allText;
+    allText.reserve(totalSize);
+    for (size_t i = 0; i < words.size(); i++) {
+      if (i > 0) allText += ' ';
+      allText += words[i];
+    }
+    renderer.ensureSdCardFontReady(fontId, allText.c_str());
+  }
+
   const int pageWidth = viewportWidth;
   auto wordWidths = calculateWordWidths(renderer, fontId);
 

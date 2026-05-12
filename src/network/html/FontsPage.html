@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Custom Fonts · CrossPoint Reader</title>
+    <style>
+      :root {
+        --font-color: #333;
+        --bg: #f5f5f5;
+        --title-color: #2c3e50;
+        --card-bg: #FFF;
+        --label-color: #7f8c8d;
+        --border-color: #eee;
+        --accent-color: rgb(110, 154, 130);
+        --accent-hover-color: #5a8c73;
+        --error-color: #e74c3c;
+        --success-color: #27ae60;
+        --dropzone-bg: #fff;
+        --dropzone-border: #c4d4cb;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --font-color: #f5f5f5;
+          --bg: #333;
+          --title-color: #ecf0f1;
+          --card-bg: #444;
+          --label-color: #bdc3c7;
+          --border-color: #555;
+          --dropzone-bg: #3a3a3a;
+          --dropzone-border: #6c8a78;
+          color-scheme: dark;
+        }
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: var(--bg);
+        color: var(--font-color);
+      }
+      h1 {
+        color: var(--title-color);
+        border-bottom: 2px solid var(--accent-color);
+        padding-bottom: 10px;
+      }
+      h2 {
+        color: var(--title-color);
+        margin-top: 0;
+      }
+      .nav-links {
+        margin: 20px 0;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .nav-links a {
+        padding: 10px 20px;
+        color: var(--font-color);
+        text-decoration: none;
+        border-radius: 4px;
+      }
+      .nav-links a.active {
+        background-color: var(--accent-color);
+        color: white;
+      }
+      .nav-links a:not(.active):hover {
+        background-color: var(--accent-hover-color);
+        color: white;
+      }
+      .card {
+        background: var(--card-bg);
+        border-radius: 8px;
+        padding: 20px;
+        margin: 15px 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      #dropzone {
+        border: 2px dashed var(--dropzone-border);
+        border-radius: 8px;
+        padding: 40px 20px;
+        text-align: center;
+        background: var(--dropzone-bg);
+        transition: background 0.15s, border-color 0.15s;
+        cursor: pointer;
+      }
+      #dropzone.dragover {
+        background-color: var(--accent-hover-color);
+        border-color: var(--accent-color);
+        color: white;
+      }
+      #dropzone p {
+        margin: 8px 0;
+      }
+      #dropzone .hint {
+        color: var(--label-color);
+        font-size: 0.9em;
+      }
+      #file-input {
+        display: none;
+      }
+      .pick-btn {
+        display: inline-block;
+        background: var(--accent-color);
+        color: white;
+        padding: 10px 18px;
+        border-radius: 4px;
+        margin-top: 8px;
+        font-weight: 600;
+      }
+      #upload-progress {
+        margin-top: 15px;
+      }
+      .upload-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .upload-row:last-child {
+        border-bottom: none;
+      }
+      .upload-row .name {
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 0.9em;
+        word-break: break-all;
+      }
+      .upload-row .status-ok {
+        color: var(--success-color);
+        font-weight: 600;
+      }
+      .upload-row .status-err {
+        color: var(--error-color);
+        font-weight: 600;
+        font-size: 0.9em;
+        max-width: 50%;
+        text-align: right;
+      }
+      .upload-row .status-busy {
+        color: var(--label-color);
+      }
+      .family-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .family-row:last-child {
+        border-bottom: none;
+      }
+      .family-name {
+        font-weight: 600;
+        color: var(--title-color);
+      }
+      .family-sizes {
+        color: var(--label-color);
+        font-size: 0.9em;
+        margin-left: 8px;
+      }
+      .selected-badge {
+        background-color: var(--success-color);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.8em;
+        margin-left: 8px;
+      }
+      .delete-btn {
+        background: transparent;
+        border: 1px solid var(--error-color);
+        color: var(--error-color);
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.85em;
+        cursor: pointer;
+        margin-left: 12px;
+      }
+      .delete-btn:hover {
+        background: var(--error-color);
+        color: white;
+      }
+      .delete-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .empty {
+        text-align: center;
+        padding: 20px;
+        color: var(--label-color);
+        font-style: italic;
+      }
+      .small {
+        font-size: 0.85em;
+        color: var(--label-color);
+      }
+      code {
+        background: var(--bg);
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔤 Custom Fonts</h1>
+
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/files">Files</a>
+      <a href="/fonts" class="active">Fonts</a>
+      <a href="/settings">Settings</a>
+    </div>
+
+    <div class="card">
+      <h2>Upload <code>.cpfont</code></h2>
+      <p class="small">
+        Drop one or more <code>.cpfont</code> files here. Filename must follow
+        <code>&lt;Family&gt;_&lt;size&gt;.cpfont</code> — e.g.
+        <code>Lexend_16.cpfont</code>.
+      </p>
+
+      <div id="dropzone" tabindex="0">
+        <p>📂 Drag &amp; drop <code>.cpfont</code> files here</p>
+        <p class="hint">or</p>
+        <p><span class="pick-btn">Pick files</span></p>
+      </div>
+      <input type="file" id="file-input" accept=".cpfont" multiple />
+
+      <div id="upload-progress"></div>
+    </div>
+
+    <div class="card">
+      <h2>Installed Families</h2>
+      <p class="small">
+        Select a family on the device:
+        <em>Settings → Reader → Custom Font (SD)</em>.
+      </p>
+      <div id="family-list" class="empty">Loading…</div>
+    </div>
+
+    <script>
+      const dropzone = document.getElementById('dropzone');
+      const fileInput = document.getElementById('file-input');
+      const uploadProgress = document.getElementById('upload-progress');
+      const familyList = document.getElementById('family-list');
+
+      // ── Family list refresh ─────────────────────────────────────────────
+      async function refreshFamilies() {
+        try {
+          const response = await fetch('/api/fonts/list');
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          const data = await response.json();
+          const families = data.families || [];
+          const selected = data.selected || '';
+
+          if (families.length === 0) {
+            familyList.className = 'empty';
+            familyList.textContent =
+              'No custom fonts installed yet. Drop a .cpfont above to get started.';
+            return;
+          }
+
+          familyList.className = '';
+          familyList.innerHTML = '';
+          for (const fam of families) {
+            const row = document.createElement('div');
+            row.className = 'family-row';
+
+            const left = document.createElement('div');
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'family-name';
+            nameSpan.textContent = fam.name;
+            left.appendChild(nameSpan);
+            if (fam.name === selected) {
+              const badge = document.createElement('span');
+              badge.className = 'selected-badge';
+              badge.textContent = 'Selected';
+              left.appendChild(badge);
+            }
+
+            const right = document.createElement('div');
+            right.style.display = 'flex';
+            right.style.alignItems = 'center';
+            const sizes = document.createElement('span');
+            sizes.className = 'family-sizes';
+            sizes.textContent =
+              fam.sizes && fam.sizes.length
+                ? fam.sizes.join(' / ') + ' pt'
+                : '';
+            right.appendChild(sizes);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.title = 'Remove ' + fam.name + ' from /fonts';
+            deleteBtn.addEventListener('click', () => deleteFamily(fam.name, deleteBtn));
+            right.appendChild(deleteBtn);
+
+            row.appendChild(left);
+            row.appendChild(right);
+            familyList.appendChild(row);
+          }
+        } catch (err) {
+          familyList.className = 'empty';
+          familyList.textContent = 'Error loading family list: ' + err.message;
+        }
+      }
+
+      // ── Family delete ───────────────────────────────────────────────────
+      async function deleteFamily(name, btn) {
+        if (!confirm('Delete font family "' + name + '"?\n\nThis removes all sizes from the SD card.')) {
+          return;
+        }
+        btn.disabled = true;
+        btn.textContent = 'Deleting…';
+        try {
+          const form = new FormData();
+          form.append('family', name);
+          const response = await fetch('/api/fonts/delete', {
+            method: 'POST',
+            body: form,
+          });
+          if (!response.ok) {
+            throw new Error(await response.text());
+          }
+          await refreshFamilies();
+        } catch (err) {
+          btn.disabled = false;
+          btn.textContent = 'Delete';
+          alert('Failed to delete: ' + err.message);
+        }
+      }
+
+      // ── Upload pipeline ─────────────────────────────────────────────────
+      function uploadOne(file) {
+        const row = document.createElement('div');
+        row.className = 'upload-row';
+        const nameEl = document.createElement('span');
+        nameEl.className = 'name';
+        nameEl.textContent = file.name;
+        const statusEl = document.createElement('span');
+        statusEl.className = 'status-busy';
+        statusEl.textContent = 'Uploading…';
+        row.appendChild(nameEl);
+        row.appendChild(statusEl);
+        uploadProgress.prepend(row);
+
+        return new Promise((resolve) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', '/api/fonts/upload', true);
+
+          xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+              const pct = Math.round((e.loaded / e.total) * 100);
+              statusEl.textContent = pct + '%';
+            }
+          });
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status === 200) {
+              try {
+                const resp = JSON.parse(xhr.responseText);
+                statusEl.className = 'status-ok';
+                statusEl.textContent =
+                  '✓ ' + resp.family + ' / ' + resp.size + ' pt';
+              } catch (e) {
+                statusEl.className = 'status-ok';
+                statusEl.textContent = '✓ Uploaded';
+              }
+            } else {
+              statusEl.className = 'status-err';
+              statusEl.textContent =
+                xhr.responseText || 'Upload failed (' + xhr.status + ')';
+            }
+            resolve();
+          });
+
+          xhr.addEventListener('error', () => {
+            statusEl.className = 'status-err';
+            statusEl.textContent = 'Network error';
+            resolve();
+          });
+
+          const formData = new FormData();
+          formData.append('file', file);
+          xhr.send(formData);
+        });
+      }
+
+      async function uploadFiles(fileList) {
+        // Filter to .cpfont only — the device will reject anything else but
+        // surfacing it client-side gives better error messages.
+        const files = Array.from(fileList).filter((f) =>
+          f.name.toLowerCase().endsWith('.cpfont')
+        );
+        const skipped = fileList.length - files.length;
+        if (skipped > 0) {
+          const row = document.createElement('div');
+          row.className = 'upload-row';
+          const name = document.createElement('span');
+          name.className = 'name';
+          name.textContent = '(skipped non-.cpfont files)';
+          const status = document.createElement('span');
+          status.className = 'status-err';
+          status.textContent = skipped + ' file(s)';
+          row.appendChild(name);
+          row.appendChild(status);
+          uploadProgress.prepend(row);
+        }
+        // Sequential upload — the device's HTTP server is single-threaded and
+        // parallel uploads compete for SD bandwidth and the upload watchdog.
+        for (const file of files) {
+          await uploadOne(file);
+        }
+        await refreshFamilies();
+      }
+
+      // ── Event wiring ────────────────────────────────────────────────────
+      dropzone.addEventListener('click', () => fileInput.click());
+      dropzone.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          fileInput.click();
+        }
+      });
+      ['dragenter', 'dragover'].forEach((ev) =>
+        dropzone.addEventListener(ev, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropzone.classList.add('dragover');
+        })
+      );
+      ['dragleave', 'drop'].forEach((ev) =>
+        dropzone.addEventListener(ev, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropzone.classList.remove('dragover');
+        })
+      );
+      dropzone.addEventListener('drop', (e) => {
+        if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+          uploadFiles(e.dataTransfer.files);
+        }
+      });
+      fileInput.addEventListener('change', () => {
+        if (fileInput.files && fileInput.files.length > 0) {
+          uploadFiles(fileInput.files);
+          fileInput.value = '';
+        }
+      });
+
+      window.onload = refreshFamilies;
+    </script>
+  </body>
+</html>

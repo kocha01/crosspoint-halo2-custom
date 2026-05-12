@@ -2,18 +2,44 @@
 
 #include <FontDecompressor.h>
 #include <Logging.h>
+#include <SdCardFont.h>
 
 #include <cstring>
 
-FontCacheManager::FontCacheManager(const std::map<int, EpdFontFamily>& fontMap) : fontMap_(fontMap) {}
+FontCacheManager::FontCacheManager(const std::map<int, EpdFontFamily>& fontMap,
+                                   const std::map<int, SdCardFont*>& sdCardFonts)
+    : fontMap_(fontMap), sdCardFonts_(sdCardFonts) {}
 
 void FontCacheManager::setFontDecompressor(FontDecompressor* d) { fontDecompressor_ = d; }
 
 void FontCacheManager::clearCache() {
   if (fontDecompressor_) fontDecompressor_->clearCache();
+  // SD card font caches deliberately survive PrewarmScope::ctor()'s clearCache()
+  // call.  Reasons:
+  //   1. The next page's text usually overlaps heavily with the current page —
+  //      keeping mini-cache hits avoids round-tripping the same glyphs to SD.
+  //   2. SdCardFont::prewarm() now short-circuits when the same UTF-8 text was
+  //      just prewarmed (idempotency hash), so a redundant prewarm call after
+  //      this clearCache() would have been a no-op anyway — but only if we
+  //      DON'T wipe the cache here.
+  // To explicitly invalidate SD caches (e.g. on font switch), call
+  // SdCardFontManager::unloadAll() which destroys the SdCardFont entirely.
 }
 
 void FontCacheManager::prewarmCache(int fontId, const char* utf8Text, uint8_t styleMask) {
+  // SD card font prewarm path: full prewarm (with bitmaps) for all requested
+  // styles in one call.  This is the critical performance path — without it,
+  // every glyph during real render falls through glyphMissHandler → SD seek
+  // per glyph → 2-3 second page turns.
+  auto sdIt = sdCardFonts_.find(fontId);
+  if (sdIt != sdCardFonts_.end()) {
+    int missed = sdIt->second->prewarm(utf8Text, styleMask);
+    if (missed > 0) {
+      LOG_DBG("FCM", "prewarmCache(SD): %d glyph(s) not found (styleMask=0x%02X)", missed, styleMask);
+    }
+    return;
+  }
+
   if (!fontDecompressor_ || fontMap_.count(fontId) == 0) return;
 
   for (uint8_t i = 0; i < 4; i++) {
@@ -30,10 +56,16 @@ void FontCacheManager::prewarmCache(int fontId, const char* utf8Text, uint8_t st
 
 void FontCacheManager::logStats(const char* label) {
   if (fontDecompressor_) fontDecompressor_->logStats(label);
+  for (auto& [id, font] : sdCardFonts_) {
+    font->logStats(label);
+  }
 }
 
 void FontCacheManager::resetStats() {
   if (fontDecompressor_) fontDecompressor_->resetStats();
+  for (auto& [id, font] : sdCardFonts_) {
+    font->resetStats();
+  }
 }
 
 bool FontCacheManager::isScanning() const { return scanMode_ == ScanMode::Scanning; }
