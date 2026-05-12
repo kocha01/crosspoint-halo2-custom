@@ -46,6 +46,94 @@ constexpr int sideCoverSourceH = 200;
 constexpr int farCoverSourceH = 150;
 int coverWidth = 0;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Cover BMP byte cache (LRU)
+//
+// Why: ModernTheme renders 5 cover thumbnails per home-screen redraw (center +
+// 2 sides + 2 far).  Each cover navigates left/right invalidates the cover
+// buffer and forces a fresh render — without caching, that's 5 × SD-open +
+// row-by-row pixel reads ≈ 500-750 ms per nav, on top of the FAST_REFRESH
+// e-ink wait.  By caching the raw .bmp file bytes (parsed once via the new
+// Bitmap memory-source ctor), subsequent renders skip the SD I/O entirely and
+// nav latency drops to e-ink-bound (~450 ms).
+//
+// Budget: 96 KB total — comfortably fits the 5 visible covers' BMP files
+// (typical 7 KB far + 14 KB side + 23 KB center).  After the budget is full
+// the LRU evicts the oldest entry on each new load.  Memory is held by the
+// theme singleton for the device lifetime; on Home re-entry the cache is
+// already warm.
+// ─────────────────────────────────────────────────────────────────────────────
+constexpr size_t BMP_CACHE_BUDGET_BYTES = 96 * 1024;
+struct CachedBmp {
+  std::string path;        // identity key (full SD path including [HEIGHT] resolved)
+  std::vector<uint8_t> bytes;
+  uint32_t lruTick = 0;    // higher = more recently used
+};
+std::vector<CachedBmp> bmpCache_;
+uint32_t bmpCacheTick_ = 0;
+
+size_t bmpCacheUsedBytes() {
+  size_t total = 0;
+  for (const auto& e : bmpCache_) total += e.bytes.size();
+  return total;
+}
+
+// Find a cached BMP by path; bumps its LRU tick on hit.  Returns nullptr if
+// not cached, or pointer-to-vector otherwise.
+const std::vector<uint8_t>* findCachedBmp(const std::string& path) {
+  for (auto& e : bmpCache_) {
+    if (e.path == path) {
+      e.lruTick = ++bmpCacheTick_;
+      return &e.bytes;
+    }
+  }
+  return nullptr;
+}
+
+// Evict least-recently-used entries until cache-used + incomingBytes ≤ budget.
+void bmpCacheMakeRoomFor(size_t incomingBytes) {
+  while (!bmpCache_.empty() && bmpCacheUsedBytes() + incomingBytes > BMP_CACHE_BUDGET_BYTES) {
+    auto victim = bmpCache_.begin();
+    for (auto it = bmpCache_.begin(); it != bmpCache_.end(); ++it) {
+      if (it->lruTick < victim->lruTick) victim = it;
+    }
+    bmpCache_.erase(victim);
+  }
+}
+
+// Load `path` from SD into the cache (or return existing cache hit).  Returns
+// nullptr if the file doesn't exist or is too large to fit even after eviction.
+const std::vector<uint8_t>* loadOrCacheBmp(const std::string& path) {
+  if (const auto* hit = findCachedBmp(path)) return hit;
+
+  FsFile file;
+  if (!Storage.openFileForRead("HOME", path, file)) return nullptr;
+  const size_t fileSize = file.size();
+  if (fileSize == 0 || fileSize > BMP_CACHE_BUDGET_BYTES) {
+    file.close();
+    return nullptr;  // empty or pathological file
+  }
+
+  bmpCacheMakeRoomFor(fileSize);
+
+  CachedBmp entry;
+  entry.path = path;
+  entry.bytes.resize(fileSize);
+  entry.lruTick = ++bmpCacheTick_;
+  if (file.seek(0)) {
+    int read = file.read(entry.bytes.data(), fileSize);
+    file.close();
+    if (read != static_cast<int>(fileSize)) {
+      return nullptr;  // partial read; don't cache corrupt data
+    }
+  } else {
+    file.close();
+    return nullptr;
+  }
+  bmpCache_.push_back(std::move(entry));
+  return &bmpCache_.back().bytes;
+}
+
 const uint8_t* iconForName(UIIcon icon, int size) {
   if (size == 24) {
     switch (icon) {
@@ -626,14 +714,12 @@ void ModernTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const st
       const std::string& coverPath = recentBooks[idx].coverBmpPath;
       if (!coverPath.empty()) {
         const std::string bmpPath = UITheme::getCoverThumbPath(coverPath, thumbHeight);
-        FsFile file;
-        if (Storage.openFileForRead("HOME", bmpPath, file)) {
-          Bitmap bmp(file);
+        if (const auto* cachedBytes = loadOrCacheBmp(bmpPath)) {
+          Bitmap bmp(cachedBytes->data(), cachedBytes->size());
           if (bmp.parseHeaders() == BmpReaderError::Ok) {
             displayW = displayWidthForBitmap(bmp, targetH, fallbackW, maxW);
             hasCover = true;
           }
-          file.close();
         }
       }
 
@@ -651,14 +737,12 @@ void ModernTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const st
 
       if (!coverPath.empty()) {
         const std::string bmpPath = UITheme::getCoverThumbPath(coverPath, thumbHeight);
-        FsFile file;
-        if (Storage.openFileForRead("HOME", bmpPath, file)) {
-          Bitmap bmp(file);
+        if (const auto* cachedBytes = loadOrCacheBmp(bmpPath)) {
+          Bitmap bmp(cachedBytes->data(), cachedBytes->size());
           if (bmp.parseHeaders() == BmpReaderError::Ok) {
             renderer.drawBitmap(bmp, contentX, contentY, contentW, contentH, 0.0f, 0.0f);
             hasCover = true;
           }
-          file.close();
         }
       }
       if (!hasCover) {
@@ -707,15 +791,13 @@ void ModernTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const st
 
       if (!coverPath.empty()) {
         const std::string coverBmpPath = UITheme::getCoverThumbPath(coverPath, centerCoverSourceH);
-        FsFile probeFile;
-        if (Storage.openFileForRead("HOME", coverBmpPath, probeFile)) {
-          Bitmap probeBitmap(probeFile);
+        if (const auto* cachedBytes = loadOrCacheBmp(coverBmpPath)) {
+          Bitmap probeBitmap(cachedBytes->data(), cachedBytes->size());
           if (probeBitmap.parseHeaders() == BmpReaderError::Ok) {
             displayW = std::clamp(std::max(1, (probeBitmap.getWidth() * centerCoverH + probeBitmap.getHeight() / 2) /
                                                   probeBitmap.getHeight()),
                                   1, centerCoverH);
           }
-          probeFile.close();
         }
       }
 
@@ -735,15 +817,13 @@ void ModernTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const st
 
       if (!coverPath.empty()) {
         const std::string coverBmpPath = UITheme::getCoverThumbPath(coverPath, centerCoverSourceH);
-        FsFile file;
-        if (Storage.openFileForRead("HOME", coverBmpPath, file)) {
-          Bitmap bitmap(file);
+        if (const auto* cachedBytes = loadOrCacheBmp(coverBmpPath)) {
+          Bitmap bitmap(cachedBytes->data(), cachedBytes->size());
           if (bitmap.parseHeaders() == BmpReaderError::Ok) {
             renderer.drawBitmap(bitmap, contentX, contentY, contentW, contentH, 0.0f, 0.0f);
             coverWidth = displayW;
             hasCover = true;
           }
-          file.close();
         }
       }
 

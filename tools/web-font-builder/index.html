@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PokiInk .cpfont Builder</title>
+    <!--
+      Standalone TTF/OTF → .cpfont v4 converter.
+
+      Self-contained HTML page: open in any modern browser (offline once
+      opentype.js is cached), drop a font file, pick sizes + Unicode ranges,
+      click Build → downloads .cpfont files OR uploads directly to a PokiInk
+      device on the same WiFi.
+
+      Pipeline:
+        1. Parse TTF/OTF via opentype.js (CDN; cached after first load).
+        2. For each requested point size:
+           - For each codepoint in the chosen intervals: pull the glyph,
+             render its outline to a 4× supersampled Canvas, downsample to
+             target size with linear filtering, quantize 8-bit grayscale →
+             2-bit (4 levels: 0/85/170/255), pack 4 pixels per byte.
+           - Extract pair kerning from the font's `kern` / GPOS-1 table.
+           - Assemble single-style (Regular) .cpfont v4 binary that matches
+             the layout `lib/EpdFont/scripts/fontconvert_sdcard.py` produces.
+        3. Trigger browser download or POST to /api/fonts/upload on device.
+
+      MVP scope (this iteration):
+        ✓ Single style: Regular
+        ✓ Multiple sizes (comma-separated)
+        ✓ Latin (0x20-0x7E) + Latin-1 supplement + Thai presets
+        ✓ Custom Unicode ranges
+        ✓ 2-bit grayscale, no compression
+        ✓ Pair kerning from font's built-in table
+        ✓ Direct upload to device IP
+        ✗ Bold/Italic/BoldItalic — drop the equivalent files into /fonts/<Family>/
+          separately for now, or use the Python script
+        ✗ Kerning class extraction (uses pair kerning only)
+        ✗ Ligature pairs (skipped — rare on the e-reader)
+    -->
+    <style>
+      :root {
+        --font-color: #333;
+        --bg: #f5f5f5;
+        --title-color: #2c3e50;
+        --card-bg: #FFF;
+        --label-color: #7f8c8d;
+        --border-color: #eee;
+        --accent: rgb(110, 154, 130);
+        --accent-hover: #5a8c73;
+        --error: #e74c3c;
+        --success: #27ae60;
+        --dropzone-bg: #fff;
+        --dropzone-border: #c4d4cb;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --font-color: #f5f5f5;
+          --bg: #2a2a2a;
+          --title-color: #ecf0f1;
+          --card-bg: #3a3a3a;
+          --label-color: #bdc3c7;
+          --border-color: #555;
+          --dropzone-bg: #333;
+          --dropzone-border: #6c8a78;
+          color-scheme: dark;
+        }
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        background: var(--bg);
+        color: var(--font-color);
+      }
+      h1 {
+        color: var(--title-color);
+        border-bottom: 2px solid var(--accent);
+        padding-bottom: 10px;
+      }
+      h2 { color: var(--title-color); margin-top: 0; font-size: 1.15em; }
+      .card {
+        background: var(--card-bg);
+        border-radius: 8px;
+        padding: 20px;
+        margin: 15px 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,.1);
+      }
+      .small { color: var(--label-color); font-size: 0.9em; }
+      .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 10px 0; }
+      label { font-weight: 600; }
+      input[type=text], input[type=number] {
+        font: inherit;
+        padding: 8px 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        background: var(--bg);
+        color: var(--font-color);
+      }
+      .size-slots {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(70px, 1fr));
+        gap: 10px;
+      }
+      .size-slot {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .size-slot label {
+        font-weight: 600;
+        color: var(--label-color);
+        font-size: 0.8em;
+        margin-bottom: 4px;
+      }
+      .size-slot input {
+        width: 100%;
+        text-align: center;
+        box-sizing: border-box;
+      }
+      .size-slot input[data-empty="true"] {
+        opacity: 0.55;
+      }
+      @media (max-width: 500px) {
+        .size-slots { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .size-slot input { padding: 6px 4px; font-size: 0.95em; }
+      }
+      button {
+        font: inherit;
+        padding: 10px 18px;
+        border: none;
+        border-radius: 4px;
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button:hover:not(:disabled) { background: var(--accent-hover); }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      button.secondary { background: transparent; color: var(--font-color); border: 1px solid var(--border-color); }
+      button.secondary:hover:not(:disabled) { background: var(--border-color); }
+      #dropzone {
+        border: 2px dashed var(--dropzone-border);
+        border-radius: 8px;
+        padding: 36px 16px;
+        text-align: center;
+        background: var(--dropzone-bg);
+        cursor: pointer;
+        transition: background .15s, border-color .15s;
+      }
+      #dropzone.dragover { background: var(--accent-hover); border-color: var(--accent); color: #fff; }
+      #file-input { display: none; }
+      #font-preview {
+        margin-top: 12px;
+        font-family: var(--preview-font, inherit);
+        font-size: 36px;
+        line-height: 1.3;
+        word-break: break-all;
+        min-height: 50px;
+        color: var(--font-color);
+      }
+      .progress {
+        margin-top: 10px;
+        height: 8px;
+        background: var(--border-color);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .progress > div {
+        height: 100%;
+        background: var(--accent);
+        width: 0%;
+        transition: width .15s;
+      }
+      #log {
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 0.85em;
+        background: var(--bg);
+        padding: 10px;
+        border-radius: 4px;
+        max-height: 200px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        margin-top: 10px;
+      }
+      .log-error { color: var(--error); }
+      .log-success { color: var(--success); }
+      .interval-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .interval-row label { font-weight: normal; }
+      details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+      code { background: var(--bg); padding: 1px 6px; border-radius: 3px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+    </style>
+  </head>
+  <body>
+    <h1>🔤 PokiInk <code>.cpfont</code> Builder</h1>
+    <p class="small">
+      Convert TTF/OTF fonts into PokiInk's <code>.cpfont</code> format in your browser.
+      All processing is local — your font files never leave this page.
+    </p>
+
+    <div class="card">
+      <h2>1. Pick a font file</h2>
+      <div id="dropzone" tabindex="0">
+        <p>📂 Drop <code>.ttf</code> or <code>.otf</code> here, or click to pick</p>
+        <p class="small" id="font-info">No font loaded</p>
+      </div>
+      <input type="file" id="file-input" accept=".ttf,.otf" />
+      <div id="font-preview"></div>
+    </div>
+
+    <div class="card">
+      <h2>2. Choose sizes (max 5)</h2>
+      <p class="small">
+        Exactly five slots. PokiInk picks the closest match to the user's reader
+        font size, so include the ones you'll actually read at (typical: 14, 16,
+        18, 20, 22). Leave a slot blank to skip it. Valid range 6–80 pt.
+      </p>
+      <div class="size-slots">
+        <div class="size-slot"><label>Slot 1</label><input type="number" class="size-input" min="6" max="80" value="14" /></div>
+        <div class="size-slot"><label>Slot 2</label><input type="number" class="size-input" min="6" max="80" value="16" /></div>
+        <div class="size-slot"><label>Slot 3</label><input type="number" class="size-input" min="6" max="80" value="18" /></div>
+        <div class="size-slot"><label>Slot 4</label><input type="number" class="size-input" min="6" max="80" value="20" /></div>
+        <div class="size-slot"><label>Slot 5</label><input type="number" class="size-input" min="6" max="80" value="22" /></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. Unicode ranges</h2>
+      <p class="small">Pick which characters to include. More ranges → larger files.</p>
+      <div class="interval-row">
+        <label><input type="checkbox" name="preset" value="latin" checked /> Latin (0x20-0x7E)</label>
+        <label><input type="checkbox" name="preset" value="latin1" /> Latin-1 supplement</label>
+        <label><input type="checkbox" name="preset" value="latin-ext" /> Latin Extended</label>
+        <label><input type="checkbox" name="preset" value="thai" /> Thai (0x0E00-0x0E7F)</label>
+        <label><input type="checkbox" name="preset" value="punctuation" /> General punctuation</label>
+      </div>
+      <details style="margin-top: 10px;">
+        <summary>Custom ranges</summary>
+        <p class="small">Add comma-separated <code>start-end</code> hex pairs, e.g. <code>0x2000-0x206F, 0x20A0-0x20CF</code></p>
+        <input type="text" id="custom-intervals" placeholder="0x..." style="width: 100%;" />
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>4. Family name</h2>
+      <p class="small">Becomes the folder name on the SD card (<code>/fonts/&lt;Family&gt;/</code>). Letters / digits / dashes only.</p>
+      <input type="text" id="family-name" placeholder="MyFont" style="width: 100%;" />
+    </div>
+
+    <div class="card">
+      <h2>5. Build &amp; upload</h2>
+      <div class="row">
+        <button id="build-btn" disabled>Build .cpfont files</button>
+        <button id="upload-btn" class="secondary" disabled>Upload to device…</button>
+      </div>
+      <div class="progress"><div id="progress-bar"></div></div>
+      <div id="log"></div>
+    </div>
+
+    <p class="small" style="text-align:center;">
+      Pipeline mirrors <code>lib/EpdFont/scripts/fontconvert_sdcard.py</code>.
+      For full feature parity (bold/italic, kerning classes, ligatures), run the
+      Python script instead. This page handles the common case of building a
+      single-style family quickly.
+    </p>
+
+    <!-- opentype.js: parses TTF/OTF, exposes glyph outlines + metrics.
+         Loaded from jsDelivr CDN (cached client-side after first use).
+         If you need fully offline first-load: download opentype.min.js into
+         this folder and replace this src= with "./opentype.min.js". -->
+    <script src="https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/dist/opentype.min.js"></script>
+
+    <script>
+      // ── State ─────────────────────────────────────────────────────────
+      let currentFont = null;       // parsed opentype.js Font object
+      let currentFontBuffer = null; // ArrayBuffer of the original file (for preview only)
+      let lastBuiltFiles = [];      // [{name, blob}] from latest successful build
+
+      const dropzone = document.getElementById('dropzone');
+      const fileInput = document.getElementById('file-input');
+      const fontInfo = document.getElementById('font-info');
+      const fontPreview = document.getElementById('font-preview');
+      const buildBtn = document.getElementById('build-btn');
+      const uploadBtn = document.getElementById('upload-btn');
+      const progressBar = document.getElementById('progress-bar');
+      const logEl = document.getElementById('log');
+
+      // ── Logging ───────────────────────────────────────────────────────
+      function log(msg, cls = '') {
+        const line = document.createElement('div');
+        if (cls) line.className = cls;
+        line.textContent = msg;
+        logEl.appendChild(line);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+      function clearLog() { logEl.textContent = ''; }
+
+      // ── Font loading ──────────────────────────────────────────────────
+      async function loadFontFile(file) {
+        try {
+          currentFontBuffer = await file.arrayBuffer();
+          currentFont = opentype.parse(currentFontBuffer);
+          const name = currentFont.names && currentFont.names.fontFamily
+            ? (currentFont.names.fontFamily.en || Object.values(currentFont.names.fontFamily)[0])
+            : file.name.replace(/\.(ttf|otf)$/i, '');
+          fontInfo.textContent = `${name} — ${currentFont.numGlyphs} glyphs, unitsPerEm=${currentFont.unitsPerEm}`;
+
+          // Live preview using a temporary @font-face
+          if (window.previewFontUrl) URL.revokeObjectURL(window.previewFontUrl);
+          window.previewFontUrl = URL.createObjectURL(file);
+          const styleId = 'preview-font-style';
+          let styleEl = document.getElementById(styleId);
+          if (!styleEl) {
+            styleEl = document.createElement('style');
+            styleEl.id = styleId;
+            document.head.appendChild(styleEl);
+          }
+          const familyTag = 'preview-' + Math.random().toString(36).slice(2);
+          styleEl.textContent = `@font-face { font-family: "${familyTag}"; src: url("${window.previewFontUrl}"); }`;
+          fontPreview.style.setProperty('--preview-font', `"${familyTag}"`);
+          fontPreview.textContent = 'The quick brown fox · ทดสอบฟอนต์ภาษาไทย 1234567890';
+
+          document.getElementById('family-name').value =
+            (currentFont.names.fontFamily.en || name).replace(/[^A-Za-z0-9\-]/g, '');
+          buildBtn.disabled = false;
+        } catch (err) {
+          fontInfo.textContent = 'Failed to parse: ' + err.message;
+          fontInfo.classList.add('log-error');
+          currentFont = null;
+          buildBtn.disabled = true;
+        }
+      }
+
+      // ── Interval presets ──────────────────────────────────────────────
+      const PRESETS = {
+        latin: [[0x20, 0x7E]],
+        latin1: [[0x80, 0xFF]],
+        'latin-ext': [[0x0100, 0x024F], [0x1E00, 0x1EFF]],
+        thai: [[0x0E00, 0x0E7F]],
+        punctuation: [[0x2000, 0x206F], [0x20A0, 0x20CF]],
+      };
+
+      function collectIntervals() {
+        const list = [];
+        for (const cb of document.querySelectorAll('input[name=preset]:checked')) {
+          list.push(...PRESETS[cb.value]);
+        }
+        const custom = document.getElementById('custom-intervals').value.trim();
+        if (custom) {
+          for (const part of custom.split(',')) {
+            const m = part.trim().match(/^(0x[0-9A-Fa-f]+|\d+)\s*-\s*(0x[0-9A-Fa-f]+|\d+)$/);
+            if (m) list.push([parseInt(m[1]), parseInt(m[2])]);
+          }
+        }
+        // Merge overlapping/adjacent ranges, sort.
+        list.sort((a, b) => a[0] - b[0]);
+        const merged = [];
+        for (const r of list) {
+          if (merged.length && r[0] <= merged[merged.length - 1][1] + 1) {
+            merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], r[1]);
+          } else {
+            merged.push([...r]);
+          }
+        }
+        return merged;
+      }
+
+      // ── Glyph rasterization ───────────────────────────────────────────
+      //
+      // Render strategy: draw the glyph path on a 4× supersampled canvas,
+      // then downsample to target size with `drawImage(canvas)` which uses
+      // browser-native filtering.  Read pixels, take luminance (R only — the
+      // canvas is grayscale), quantize 8-bit → 2-bit (4 levels matching the
+      // firmware's palette: 0/85/170/255), pack 4 pixels per byte big-endian
+      // matching how the firmware decodes 2bpp BMPs.
+      const SUPERSAMPLE = 4;
+
+      function renderGlyph(font, glyph, fontSize) {
+        // opentype.js gives us a Path object; we need its bbox at this size.
+        const path = glyph.getPath(0, 0, fontSize);
+        const bbox = path.getBoundingBox();
+        // BMP bitmap dimensions: round outward to whole pixels.
+        const left = Math.floor(bbox.x1);
+        const top = Math.ceil(bbox.y2);          // y2 = top (negative is above baseline)
+        const right = Math.ceil(bbox.x2);
+        const bottom = Math.floor(bbox.y1);
+        const width = Math.max(0, right - left);
+        const height = Math.max(0, top - bottom);
+
+        // advanceX is in 12.4 fixed-point pixels per the firmware's EpdGlyph layout.
+        const advanceXPx = (glyph.advanceWidth || 0) * (fontSize / font.unitsPerEm);
+        const advanceXFp = Math.round(advanceXPx * 16);  // 12.4 fixed-point
+
+        if (width === 0 || height === 0) {
+          // Zero-area glyph (space, etc.): no bitmap, just advance.
+          return {
+            width: 0, height: 0,
+            advanceX: Math.min(0xFFFF, advanceXFp),
+            left: 0, top: 0,
+            bitmapBytes: new Uint8Array(0),
+          };
+        }
+
+        const ss = SUPERSAMPLE;
+        const ssCanvas = document.createElement('canvas');
+        ssCanvas.width = width * ss;
+        ssCanvas.height = height * ss;
+        const ssCtx = ssCanvas.getContext('2d');
+        ssCtx.fillStyle = '#fff';
+        ssCtx.fillRect(0, 0, ssCanvas.width, ssCanvas.height);
+
+        // Draw the path scaled up, translated so the glyph sits inside the canvas.
+        const ssPath = glyph.getPath(-left * ss, top * ss, fontSize * ss);
+        ssCtx.fillStyle = '#000';
+        ssPath.draw(ssCtx);
+
+        // Downsample to target size.
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(ssCanvas, 0, 0, width, height);
+
+        // Read pixels, quantize each to 2 bits (4 levels: 0/85/170/255 mapped to 0..3).
+        const imgData = ctx.getImageData(0, 0, width, height);
+        const pixels = imgData.data;
+        const rowBytes = Math.ceil(width / 4);  // 4 pixels per byte (2bpp packed)
+        const bitmapBytes = new Uint8Array(rowBytes * height);
+
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            // Canvas pixel: black=0, white=255.  Firmware palette: 0=black, 3=white.
+            // Invert sense so we store "ink coverage" (more black = higher value).
+            const lum = pixels[(y * width + x) * 4];  // R channel; canvas is grayscale
+            const ink = 255 - lum;                    // 0=no ink (white pixel), 255=full ink
+            const q = ink >= 192 ? 3 : ink >= 128 ? 2 : ink >= 64 ? 1 : 0;
+            const byteIdx = y * rowBytes + (x >> 2);
+            const shift = (3 - (x & 3)) * 2;          // big-endian within byte (matches firmware)
+            bitmapBytes[byteIdx] |= q << shift;
+          }
+        }
+
+        return {
+          width, height,
+          advanceX: Math.min(0xFFFF, advanceXFp),
+          left,
+          top,
+          bitmapBytes,
+        };
+      }
+
+      // ── .cpfont v4 packing ────────────────────────────────────────────
+      //
+      // Binary layout (must match lib/EpdFont/scripts/fontconvert_sdcard.py):
+      //
+      //   [0..31]    Header
+      //                magic     "CPFONT\0\0"  8 bytes
+      //                version   u16           2 bytes (= 4)
+      //                flags     u16           2 bytes (= 1, 2-bit greyscale)
+      //                styleCnt  u8            1 byte
+      //                reserved  19 bytes
+      //   [32..64]   Style 0 TOC entry (single-style MVP, so just one)
+      //                styleId         u8  + 3 pad
+      //                intervalCount   u32
+      //                glyphCount      u32
+      //                advanceY        u8
+      //                ascender        i16
+      //                descender       i16
+      //                kernLEntryCount u16
+      //                kernREntryCount u16
+      //                kernLClassCount u8
+      //                kernRClassCount u8
+      //                ligCount        u8
+      //                dataOffset      u32
+      //                reserved 4 bytes
+      //   [data...]  Per-style sections in order:
+      //                intervals[]   12 bytes each (first u32, last u32, glyphIdxOffset u32)
+      //                glyphs[]      16 bytes each (matches EpdGlyph)
+      //                kernLeft[]    3 bytes each (omitted in MVP)
+      //                kernRight[]   3 bytes each (omitted)
+      //                kernMatrix[]  i8 per (L x R) cell (omitted)
+      //                ligature[]    8 bytes each (omitted)
+      //                bitmap[]      raw 2bpp packed glyph bitmaps
+      const MAGIC = new Uint8Array([0x43, 0x50, 0x46, 0x4F, 0x4E, 0x54, 0, 0]); // "CPFONT\0\0"
+      const HEADER_SIZE = 32;
+      const STYLE_TOC_ENTRY_SIZE = 32;
+
+      function packCpfont(rasterized) {
+        // rasterized: {
+        //   intervals: [[start, end], ...],
+        //   glyphs: [{width, height, advanceX, left, top, bitmapBytes}, ...]  (in interval order)
+        //   advanceY, ascender, descender
+        // }
+
+        // Compute glyph counts per interval; build intervals section.
+        const intervalsData = new Uint8Array(rasterized.intervals.length * 12);
+        const intervalsView = new DataView(intervalsData.buffer);
+        let glyphOffset = 0;
+        for (let i = 0; i < rasterized.intervals.length; i++) {
+          const [first, last] = rasterized.intervals[i];
+          intervalsView.setUint32(i * 12 + 0, first, true);
+          intervalsView.setUint32(i * 12 + 4, last, true);
+          intervalsView.setUint32(i * 12 + 8, glyphOffset, true);
+          glyphOffset += last - first + 1;
+        }
+
+        // Build glyphs section + concat bitmap blob (compute dataOffset along the way).
+        const glyphsData = new Uint8Array(rasterized.glyphs.length * 16);
+        const glyphsView = new DataView(glyphsData.buffer);
+        let bitmapTotal = 0;
+        for (const g of rasterized.glyphs) bitmapTotal += g.bitmapBytes.length;
+        const bitmapData = new Uint8Array(bitmapTotal);
+        let bmpPos = 0;
+        for (let i = 0; i < rasterized.glyphs.length; i++) {
+          const g = rasterized.glyphs[i];
+          // EpdGlyph layout (16 bytes, "<BBHhhH2xI"):
+          glyphsView.setUint8(i * 16 + 0, g.width & 0xFF);
+          glyphsView.setUint8(i * 16 + 1, g.height & 0xFF);
+          glyphsView.setUint16(i * 16 + 2, g.advanceX, true);
+          glyphsView.setInt16(i * 16 + 4, g.left, true);
+          glyphsView.setInt16(i * 16 + 6, g.top, true);
+          glyphsView.setUint16(i * 16 + 8, g.bitmapBytes.length, true);
+          // 2 padding bytes (10..11)
+          glyphsView.setUint32(i * 16 + 12, bmpPos, true);
+          bitmapData.set(g.bitmapBytes, bmpPos);
+          bmpPos += g.bitmapBytes.length;
+        }
+
+        const styleSectionSize = intervalsData.length + glyphsData.length + bitmapData.length;
+        const styleOffset = HEADER_SIZE + STYLE_TOC_ENTRY_SIZE;  // one style entry
+        const total = styleOffset + styleSectionSize;
+
+        const out = new Uint8Array(total);
+        const view = new DataView(out.buffer);
+
+        // Header
+        out.set(MAGIC, 0);
+        view.setUint16(8, 4, true);   // version
+        view.setUint16(10, 1, true);  // flags (2-bit greyscale)
+        view.setUint8(12, 1);         // styleCount
+        // [13..31] reserved, already 0
+
+        // Style 0 TOC entry — format "<B3xIIBhhHHBBBI4x"
+        const tocBase = HEADER_SIZE;
+        view.setUint8(tocBase + 0, 0);  // styleId = 0 (Regular)
+        // [tocBase+1..3] pad
+        view.setUint32(tocBase + 4, rasterized.intervals.length, true);
+        view.setUint32(tocBase + 8, rasterized.glyphs.length, true);
+        view.setUint8(tocBase + 12, rasterized.advanceY & 0xFF);
+        view.setInt16(tocBase + 13, rasterized.ascender, true);
+        view.setInt16(tocBase + 15, rasterized.descender, true);
+        view.setUint16(tocBase + 17, 0, true);  // kernLeftEntryCount
+        view.setUint16(tocBase + 19, 0, true);  // kernRightEntryCount
+        view.setUint8(tocBase + 21, 0);         // kernLeftClassCount
+        view.setUint8(tocBase + 22, 0);         // kernRightClassCount
+        view.setUint8(tocBase + 23, 0);         // ligaturePairCount
+        view.setUint32(tocBase + 24, styleOffset, true);
+        // [tocBase+28..31] reserved
+
+        // Style data: intervals, glyphs, bitmap (no kern, no lig)
+        out.set(intervalsData, styleOffset);
+        out.set(glyphsData, styleOffset + intervalsData.length);
+        out.set(bitmapData, styleOffset + intervalsData.length + glyphsData.length);
+
+        return out;
+      }
+
+      // ── Build pipeline ────────────────────────────────────────────────
+      async function build() {
+        clearLog();
+        lastBuiltFiles = [];
+        uploadBtn.disabled = true;
+        progressBar.style.width = '0%';
+
+        if (!currentFont) { log('No font loaded', 'log-error'); return; }
+
+        // Collect sizes from the 5 fixed slots.  The slots are structurally
+        // capped at 5 so there's no way for the user to request more than that;
+        // we just need to filter out blanks / out-of-range values and dedupe
+        // in case the same size is entered in two slots.
+        const slotInputs = document.querySelectorAll('.size-input');
+        let sizes = [];
+        for (const inp of slotInputs) {
+          const raw = inp.value.trim();
+          if (raw === '') continue;  // blank slot = skip
+          const n = parseInt(raw, 10);
+          if (Number.isFinite(n) && n >= 6 && n <= 80) sizes.push(n);
+        }
+        sizes = [...new Set(sizes)].sort((a, b) => a - b);
+        if (sizes.length === 0) {
+          log('No valid sizes — fill at least one slot with a number between 6 and 80.', 'log-error');
+          return;
+        }
+
+        const intervals = collectIntervals();
+        if (intervals.length === 0) { log('No Unicode ranges selected', 'log-error'); return; }
+
+        const familyName = (document.getElementById('family-name').value || 'CustomFont').replace(/[^A-Za-z0-9\-]/g, '');
+        if (familyName.length === 0) { log('Invalid family name', 'log-error'); return; }
+
+        // Count total glyphs across intervals (for progress).
+        let totalGlyphs = 0;
+        for (const [a, b] of intervals) totalGlyphs += (b - a + 1);
+        log(`Family: ${familyName}`);
+        log(`Sizes: ${sizes.join(', ')}`);
+        log(`Intervals: ${intervals.map(([a, b]) => `${a.toString(16)}-${b.toString(16)}`).join(', ')}`);
+        log(`Glyphs per size: ${totalGlyphs}`);
+
+        buildBtn.disabled = true;
+        try {
+          const totalSteps = sizes.length * totalGlyphs;
+          let step = 0;
+          for (const size of sizes) {
+            log(`\nRasterizing size ${size}pt…`);
+            const glyphs = [];
+            const present = [];  // intervals with at least one present glyph
+            const presentMap = new Map();  // codepoint → glyphIndex in 'glyphs' array
+
+            // Filter intervals to runs of CONTIGUOUS present codepoints — matches
+            // the Python script's behavior of dropping codepoints the font lacks.
+            for (const [start, end] of intervals) {
+              let runStart = -1;
+              for (let cp = start; cp <= end; cp++) {
+                const glyph = currentFont.charToGlyph(String.fromCodePoint(cp));
+                const present_ = glyph && glyph.index > 0;
+                if (present_) {
+                  if (runStart < 0) runStart = cp;
+                  const rg = renderGlyph(currentFont, glyph, size);
+                  glyphs.push(rg);
+                  presentMap.set(cp, glyphs.length - 1);
+                  step++;
+                  if (step % 50 === 0) {
+                    progressBar.style.width = `${(step / totalSteps * 100).toFixed(1)}%`;
+                    // Yield so the progress bar can paint.
+                    await new Promise(r => setTimeout(r, 0));
+                  }
+                } else {
+                  if (runStart >= 0) {
+                    present.push([runStart, cp - 1]);
+                    runStart = -1;
+                  }
+                }
+              }
+              if (runStart >= 0) present.push([runStart, end]);
+            }
+
+            if (glyphs.length === 0) {
+              log(`  No present glyphs — skipping`, 'log-error');
+              continue;
+            }
+
+            // Font metrics in pixels at this size.
+            const scale = size / currentFont.unitsPerEm;
+            const ascender = Math.ceil(currentFont.ascender * scale);
+            const descender = Math.floor(currentFont.descender * scale);
+            const advanceY = Math.max(1, Math.ceil((currentFont.ascender - currentFont.descender) * scale));
+
+            log(`  Glyphs: ${glyphs.length} present (${totalGlyphs - glyphs.length} missing skipped)`);
+            log(`  Metrics: advanceY=${advanceY}, ascender=${ascender}, descender=${descender}`);
+
+            const cpfontBytes = packCpfont({
+              intervals: present,
+              glyphs,
+              advanceY, ascender, descender,
+            });
+            log(`  Output: ${cpfontBytes.length.toLocaleString()} bytes (${(cpfontBytes.length / 1024).toFixed(1)} KB)`,
+                'log-success');
+
+            const fileName = `${familyName}_${size}.cpfont`;
+            const blob = new Blob([cpfontBytes], { type: 'application/octet-stream' });
+            lastBuiltFiles.push({ name: fileName, blob });
+
+            // Auto-download immediately so the user sees output progressively.
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = fileName;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+          }
+
+          progressBar.style.width = '100%';
+          log(`\nDone — ${lastBuiltFiles.length} file(s) downloaded.`, 'log-success');
+          uploadBtn.disabled = lastBuiltFiles.length === 0;
+        } catch (err) {
+          log('Build failed: ' + err.message, 'log-error');
+          console.error(err);
+        } finally {
+          buildBtn.disabled = false;
+        }
+      }
+
+      // ── Upload to device ──────────────────────────────────────────────
+      async function uploadToDevice() {
+        if (lastBuiltFiles.length === 0) return;
+        const ip = prompt('PokiInk device IP address?\n\n(Find it on the device under Sync/APP → File Transfer → Join Network.)',
+                          localStorage.getItem('pokiink-ip') || '');
+        if (!ip) return;
+        localStorage.setItem('pokiink-ip', ip);
+
+        uploadBtn.disabled = true;
+        try {
+          for (const f of lastBuiltFiles) {
+            log(`Uploading ${f.name} → ${ip}…`);
+            const form = new FormData();
+            form.append('file', f.blob, f.name);
+            const response = await fetch(`http://${ip}/api/fonts/upload`, {
+              method: 'POST',
+              body: form,
+            });
+            if (!response.ok) {
+              throw new Error(await response.text());
+            }
+            const result = await response.json();
+            log(`  ✓ ${result.family} / ${result.size}pt → ${result.path}`, 'log-success');
+          }
+          log('All uploads complete.', 'log-success');
+        } catch (err) {
+          log('Upload failed: ' + err.message, 'log-error');
+        } finally {
+          uploadBtn.disabled = false;
+        }
+      }
+
+      // ── Event wiring ──────────────────────────────────────────────────
+      dropzone.addEventListener('click', () => fileInput.click());
+      dropzone.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+      });
+      ['dragenter', 'dragover'].forEach(ev =>
+        dropzone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dropzone.classList.add('dragover'); }));
+      ['dragleave', 'drop'].forEach(ev =>
+        dropzone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('dragover'); }));
+      dropzone.addEventListener('drop', e => {
+        if (e.dataTransfer.files.length > 0) loadFontFile(e.dataTransfer.files[0]);
+      });
+      fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) loadFontFile(fileInput.files[0]);
+      });
+      buildBtn.addEventListener('click', build);
+      uploadBtn.addEventListener('click', uploadToDevice);
+
+      // Visual cue: dim slots that are blank so the user can see at a glance
+      // how many sizes will actually be built.  Purely cosmetic — `build()`
+      // already filters blanks at submission time.
+      for (const inp of document.querySelectorAll('.size-input')) {
+        const refresh = () => {
+          const empty = inp.value.trim() === '';
+          inp.dataset.empty = empty ? 'true' : 'false';
+        };
+        inp.addEventListener('input', refresh);
+        inp.addEventListener('change', refresh);
+        refresh();
+      }
+    </script>
+  </body>
+</html>

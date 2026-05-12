@@ -64,7 +64,15 @@ class Bitmap {
  public:
   static const char* errorToString(BmpReaderError err);
 
-  explicit Bitmap(FsFile& file, bool dithering = false) : file(file), dithering(dithering) {}
+  /// File-backed source: every read/seek lands on the SD card.  Used for
+  /// the typical "open BMP from SD, draw, close" path.
+  explicit Bitmap(FsFile& file, bool dithering = false)
+      : file_(&file), memData_(nullptr), memSize_(0), memPos_(0), dithering(dithering) {}
+  /// Memory-backed source: every read/seek hits a caller-owned RAM buffer.
+  /// Lets the caller cache `.bmp` bytes once, then build a Bitmap per render
+  /// without touching the SD card.  `data` must outlive the Bitmap.
+  Bitmap(const uint8_t* data, size_t size, bool dithering = false)
+      : file_(nullptr), memData_(data), memSize_(size), memPos_(0), dithering(dithering) {}
   ~Bitmap();
   BmpReaderError parseHeaders();
   BmpReaderError readNextRow(uint8_t* data, uint8_t* rowBuffer) const;
@@ -78,10 +86,20 @@ class Bitmap {
   uint16_t getBpp() const { return bpp; }
 
  private:
-  static uint16_t readLE16(FsFile& f);
-  static uint32_t readLE32(FsFile& f);
+  /// Source-abstraction helpers — replace direct `file.read/seek/etc` calls so
+  /// the same code path serves both file-backed and memory-backed Bitmaps.
+  int srcReadByte() const;
+  int srcRead(void* buf, size_t n) const;
+  bool srcSeekSet(size_t pos) const;
+  bool srcSeekCur(int64_t offset) const;
+  uint16_t srcReadLE16() const;
+  uint32_t srcReadLE32() const;
 
-  FsFile& file;
+  // Mutually exclusive sources: file_ != nullptr → file-backed; otherwise memory-backed.
+  FsFile* file_;
+  const uint8_t* memData_;
+  size_t memSize_;
+  mutable size_t memPos_;
   bool dithering = false;
   int width = 0;
   int height = 0;
