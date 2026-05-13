@@ -398,12 +398,30 @@ int CrossPointSettings::getThaiFallbackFontId() const {
 }
 
 int CrossPointSettings::getReaderFontIdForLanguage(const std::string& language) const {
+  // SD card font is an explicit user choice — it MUST win over the Bookerly→
+  // Thai-fallback heuristic.  Otherwise picking a custom Thai font on top of a
+  // device whose built-in fontFamily is still BOOKERLY (the default) silently
+  // routes Thai pages back to the built-in Noto Serif Thai fallback and the
+  // user's selection appears to do nothing.  Resolve SD font first; on miss
+  // (family not present or resolver returns 0) fall through to the built-in
+  // logic below.
+  if (sdFontFamilyName[0] != '\0' && sdFontIdResolver) {
+    int id = sdFontIdResolver(sdFontResolverCtx, sdFontFamilyName, fontSize);
+    if (id > 0) return id;
+  }
   if (fontFamily != BOOKERLY) return getReaderFontId();
   if (isThaiLanguage(language)) return getThaiFallbackFontId();
   return getReaderFontId();
 }
 
 int CrossPointSettings::getReaderFontIdForThaiContent(const std::string& language, const std::string& title) const {
+  // Same SD-first override as getReaderFontIdForLanguage above — see comment
+  // there for why this branch can't just call getReaderFontId() after the
+  // Thai-fallback heuristic.
+  if (sdFontFamilyName[0] != '\0' && sdFontIdResolver) {
+    int id = sdFontIdResolver(sdFontResolverCtx, sdFontFamilyName, fontSize);
+    if (id > 0) return id;
+  }
   // Bai Jamjuree and CloudLoop all have native Thai glyphs — no fallback needed.
   if (fontFamily != BOOKERLY) return getReaderFontId();
   // Bookerly lacks Thai glyphs; auto-switch to Noto Serif (Thai font stack).
