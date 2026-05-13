@@ -170,6 +170,30 @@ const uint8_t* FontDecompressor::getBitmap(const EpdFontData* fontData, const Ep
     stats.cacheMisses++;
     const EpdFontGroup& group = fontData->groups[groupIndex];
 
+    // Pre-flight heap check.  std::vector::resize on OOM calls operator new,
+    // which under -fno-exceptions calls abort() — that took out the device at
+    // cold-boot when the cover BMP cache (96KB), Wi-Fi stack startup
+    // (~30-50KB for the UpdateCheckTask), and SD card font headers (~10KB)
+    // simultaneously crowded the 320KB ESP32-C3 heap.  Returning nullptr from
+    // here just drops the glyph visually for one frame (the renderer skips
+    // it) while leaving the device alive; the next frame, with WiFi-init
+    // memory freed or the cover cache LRU-evicted, normally succeeds.  Free
+    // the previous group first so the headroom check considers our own old
+    // allocation as available.
+    hotGroup.clear();
+    hotGroup.shrink_to_fit();
+
+    constexpr uint32_t FDC_HEAP_SAFETY_MARGIN = 8 * 1024;
+    const uint32_t free = ESP.getFreeHeap();
+    if (free < group.uncompressedSize + FDC_HEAP_SAFETY_MARGIN) {
+      LOG_ERR("FDC", "OOM avoided: need %u + %u margin, free %u",
+              group.uncompressedSize, FDC_HEAP_SAFETY_MARGIN, free);
+      hotGroupFont = nullptr;
+      hotGroupIndex = UINT16_MAX;
+      stats.getBitmapTimeUs += micros() - tStart;
+      return nullptr;
+    }
+
     hotGroup.resize(group.uncompressedSize);
     if (hotGroup.empty()) {
       LOG_ERR("FDC", "Failed to allocate %u bytes for hot group %u", group.uncompressedSize, groupIndex);
@@ -195,8 +219,20 @@ const uint8_t* FontDecompressor::getBitmap(const EpdFontData* fontData, const Ep
     stats.cacheHits++;
   }
 
-  // Compact just the requested glyph from byte-aligned data into scratch buffer
+  // Compact just the requested glyph from byte-aligned data into scratch buffer.
+  // Same OOM-safety pattern as the hotGroup resize above — pre-flight the heap
+  // so a too-tight allocation returns nullptr instead of abort()ing.  The
+  // scratch buffer is small (max ~width * height bytes per glyph) so the
+  // safety margin can be tight.
   if (glyph->dataLength > hotGlyphBuf.size()) {
+    constexpr uint32_t FDC_GLYPH_HEAP_MARGIN = 4 * 1024;
+    const uint32_t free = ESP.getFreeHeap();
+    if (free < glyph->dataLength + FDC_GLYPH_HEAP_MARGIN) {
+      LOG_ERR("FDC", "OOM avoided (glyph buf): need %u + %u margin, free %u",
+              glyph->dataLength, FDC_GLYPH_HEAP_MARGIN, free);
+      stats.getBitmapTimeUs += micros() - tStart;
+      return nullptr;
+    }
     hotGlyphBuf.resize(glyph->dataLength);
   }
   if (hotGlyphBuf.empty()) {
