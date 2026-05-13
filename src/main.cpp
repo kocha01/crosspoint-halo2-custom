@@ -13,6 +13,7 @@
 #include <SPI.h>
 #include <SdCardFontSystem.h>
 #include <builtinFonts/all.h>
+#include <esp_ota_ops.h>
 
 #include <cstring>
 
@@ -369,7 +370,21 @@ void setup() {
       powerManager.startDeepSleep(gpio);
       break;
     case HalGPIO::WakeupReason::AfterFlash:
-      // After flashing, just proceed to boot
+      // After flashing, just proceed to boot.  Confirm the freshly-written
+      // OTA image so the next boot doesn't see state=NEW/PENDING_VERIFY and
+      // re-enter the AfterFlash branch (which would skip the normal
+      // AfterUSBPower auto-sleep on a future cable plug-in).  Safe to call
+      // even when the running partition isn't an OTA slot — returns
+      // ESP_ERR_NOT_FOUND and we log/ignore.
+      {
+        esp_err_t err = esp_ota_mark_app_valid_cancel_rollback();
+        if (err == ESP_OK) {
+          LOG_DBG("MAIN", "OTA image marked valid");
+        } else if (err != ESP_ERR_NOT_FOUND) {
+          LOG_ERR("MAIN", "esp_ota_mark_app_valid failed: %d", err);
+        }
+      }
+      break;
     case HalGPIO::WakeupReason::Other:
     default:
       break;
