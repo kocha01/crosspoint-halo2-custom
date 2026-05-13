@@ -41,6 +41,7 @@ jobs:
             .pio/build/gh_release/firmware.elf
             .pio/build/gh_release/firmware.map
             .pio/build/gh_release/partitions.bin
+            .pio/build/gh_release/recovery.bin
 
       - name: Determine release name
         id: release_name
@@ -65,9 +66,18 @@ jobs:
           fi
 
       - name: Create GitHub Release
+        # firmware.bin = app-only image for OTA + cable-flash to 0x10000
+        # recovery.bin = merged bootloader + partitions + boot_app0 + firmware
+        #               flashable as a single blob to offset 0x0.  Use this
+        #               from web flashers that erase-then-write the whole
+        #               flash, otherwise the device boot-loops because the
+        #               app-only firmware.bin leaves no bootloader/otadata
+        #               in place.
         uses: softprops/action-gh-release@v2
         with:
-          files: .pio/build/gh_release/firmware.bin
+          files: |
+            .pio/build/gh_release/firmware.bin
+            .pio/build/gh_release/recovery.bin
           name: ${{ steps.release_name.outputs.name }}
           body: ${{ steps.release_name.outputs.name }}
         env:
