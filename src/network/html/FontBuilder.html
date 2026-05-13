@@ -501,22 +501,49 @@
         ctx.drawImage(ssCanvas, 0, 0, width, height);
 
         // Read pixels, quantize each to 2 bits (4 levels: 0/85/170/255 mapped to 0..3).
+        //
+        // Bitmap packing is CONTINUOUS across rows — 4 consecutive pixels go
+        // into one byte regardless of where the row breaks fall.  Total byte
+        // count is ceil(width * height / 4), not rowBytes × height.  This
+        // matches both the reference Python converter (which packs by
+        // `(y * width + x) % 4`) and the firmware's drawChar loop, which
+        // walks pixels with a single `pixelPosition` counter and indexes
+        // `bitmap[pixelPosition >> 2]` without ever resetting per row.
+        //
+        // The bug the previous (row-aligned) packing produced: every glyph
+        // wider than a multiple of 4 wrote ~6 extra padding bytes per row
+        // worth of zero-bits, so the firmware decoded the row's last
+        // 0..3 pixels as the start of the next row and the rest of the
+        // glyph rendered as scrambled noise.  For width=23 'A' Python
+        // emits 156 bytes (621 px / 4); JS was emitting 162 bytes — every
+        // 6th byte misaligned the rest of the glyph.
         const imgData = ctx.getImageData(0, 0, width, height);
         const pixels = imgData.data;
-        const rowBytes = Math.ceil(width / 4);  // 4 pixels per byte (2bpp packed)
-        const bitmapBytes = new Uint8Array(rowBytes * height);
+        const totalPixels = width * height;
+        const bitmapBytes = new Uint8Array(Math.ceil(totalPixels / 4));
 
-        for (let y = 0; y < height; y++) {
-          for (let x = 0; x < width; x++) {
-            // Canvas pixel: black=0, white=255.  Firmware palette: 0=black, 3=white.
-            // Invert sense so we store "ink coverage" (more black = higher value).
-            const lum = pixels[(y * width + x) * 4];  // R channel; canvas is grayscale
-            const ink = 255 - lum;                    // 0=no ink (white pixel), 255=full ink
-            const q = ink >= 192 ? 3 : ink >= 128 ? 2 : ink >= 64 ? 1 : 0;
-            const byteIdx = y * rowBytes + (x >> 2);
-            const shift = (3 - (x & 3)) * 2;          // big-endian within byte (matches firmware)
-            bitmapBytes[byteIdx] |= q << shift;
+        let px = 0;
+        for (let pos = 0; pos < totalPixels; pos++) {
+          const x = pos % width;
+          const y = (pos - x) / width;
+          // Canvas pixel: black=0, white=255.  Firmware palette: 0=white, 3=black.
+          // Invert sense so we store "ink coverage" (more black = higher value).
+          const lum = pixels[(y * width + x) * 4];  // R channel; canvas is grayscale
+          const ink = 255 - lum;                    // 0=no ink (white pixel), 255=full ink
+          const q = ink >= 192 ? 3 : ink >= 128 ? 2 : ink >= 64 ? 1 : 0;
+          px = ((px << 2) | q) & 0xFF;              // MSB-first within byte
+          if ((pos & 3) === 3) {
+            bitmapBytes[pos >> 2] = px;
+            px = 0;
           }
+        }
+        // Tail flush: if the final byte has 1-3 leftover pixels, left-shift
+        // them into the high bits and pad the rest with zeros so the
+        // continuous-pixel stride lines up with what the firmware reads.
+        if ((totalPixels & 3) !== 0) {
+          const remaining = totalPixels & 3;
+          px = (px << ((4 - remaining) * 2)) & 0xFF;
+          bitmapBytes[bitmapBytes.length - 1] = px;
         }
 
         return {
