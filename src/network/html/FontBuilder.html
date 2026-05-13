@@ -236,19 +236,24 @@
     </div>
 
     <div class="card">
-      <h2>3. Unicode ranges</h2>
-      <p class="small">Pick which characters to include. More ranges → larger files.</p>
+      <h2>3. Character coverage</h2>
+      <p class="small">What goes into the font.  The default "Thai + English" pulls Latin, Latin-1, Thai block, and general punctuation in a single click — no decisions needed.</p>
       <div class="interval-row">
-        <label><input type="checkbox" name="preset" value="latin" checked /> Latin (0x20-0x7E)</label>
-        <label><input type="checkbox" name="preset" value="latin1" /> Latin-1 supplement</label>
-        <label><input type="checkbox" name="preset" value="latin-ext" /> Latin Extended</label>
-        <label><input type="checkbox" name="preset" value="thai" /> Thai (0x0E00-0x0E7F)</label>
-        <label><input type="checkbox" name="preset" value="punctuation" /> General punctuation</label>
+        <label><input type="radio" name="coverage" value="th-en" checked /> Thai + English <span class="small">(recommended)</span></label>
+        <label><input type="radio" name="coverage" value="latin" /> English only <span class="small">(smaller file)</span></label>
+        <label><input type="radio" name="coverage" value="custom" /> Custom…</label>
       </div>
-      <details style="margin-top: 10px;">
-        <summary>Custom ranges</summary>
-        <p class="small">Add comma-separated <code>start-end</code> hex pairs, e.g. <code>0x2000-0x206F, 0x20A0-0x20CF</code></p>
-        <input type="text" id="custom-intervals" placeholder="0x..." style="width: 100%;" />
+      <details id="custom-coverage" style="margin-top: 10px;">
+        <summary>Advanced ranges (when "Custom" is selected)</summary>
+        <p class="small">Tick the blocks to include, or add comma-separated <code>start-end</code> hex pairs.</p>
+        <div class="interval-row" style="margin-top: 8px;">
+          <label><input type="checkbox" name="preset" value="latin" checked /> Latin (0x20-0x7E)</label>
+          <label><input type="checkbox" name="preset" value="latin1" /> Latin-1 supplement</label>
+          <label><input type="checkbox" name="preset" value="latin-ext" /> Latin Extended</label>
+          <label><input type="checkbox" name="preset" value="thai" /> Thai (0x0E00-0x0E7F)</label>
+          <label><input type="checkbox" name="preset" value="punctuation" /> General punctuation</label>
+        </div>
+        <input type="text" id="custom-intervals" placeholder="0x2000-0x206F, 0x20A0-0x20CF" style="width: 100%; margin-top: 8px;" />
       </details>
     </div>
 
@@ -374,16 +379,32 @@
 
       function collectIntervals() {
         const list = [];
-        for (const cb of document.querySelectorAll('input[name=preset]:checked')) {
-          list.push(...PRESETS[cb.value]);
-        }
-        const custom = document.getElementById('custom-intervals').value.trim();
-        if (custom) {
-          for (const part of custom.split(',')) {
-            const m = part.trim().match(/^(0x[0-9A-Fa-f]+|\d+)\s*-\s*(0x[0-9A-Fa-f]+|\d+)$/);
-            if (m) list.push([parseInt(m[1]), parseInt(m[2])]);
+
+        // Top-level coverage radio (the simple flow most users want).  Custom
+        // falls through to the legacy checkbox UI inside the <details>.
+        const coverage = (document.querySelector('input[name=coverage]:checked') || {}).value || 'th-en';
+        if (coverage === 'th-en') {
+          // Bundled: Latin + Latin-1 + Thai block + general punctuation +
+          // sub/superscripts.  Matches lib/EpdFont/scripts/fontconvert_sdcard.py's
+          // "thai" preset which is the proven combo for real-world Thai books
+          // that mix Latin digits, English words, em-dashes, and tone marks.
+          list.push(...PRESETS.thai);
+        } else if (coverage === 'latin') {
+          list.push(...PRESETS.latin);
+        } else {
+          // Custom — fall back to the per-block checkboxes + user-typed ranges.
+          for (const cb of document.querySelectorAll('input[name=preset]:checked')) {
+            list.push(...PRESETS[cb.value]);
+          }
+          const custom = document.getElementById('custom-intervals').value.trim();
+          if (custom) {
+            for (const part of custom.split(',')) {
+              const m = part.trim().match(/^(0x[0-9A-Fa-f]+|\d+)\s*-\s*(0x[0-9A-Fa-f]+|\d+)$/);
+              if (m) list.push([parseInt(m[1]), parseInt(m[2])]);
+            }
           }
         }
+
         // Always include the replacement glyph so the firmware has a fallback.
         list.push([...REPLACEMENT_INTERVAL]);
         // Merge overlapping/adjacent ranges, sort.
@@ -808,6 +829,15 @@
       });
       buildBtn.addEventListener('click', build);
       uploadBtn.addEventListener('click', uploadToDevice);
+
+      // Auto-open the Advanced ranges section when the user picks the Custom
+      // radio — saves a click and makes it obvious where the knobs live.
+      const customDetails = document.getElementById('custom-coverage');
+      for (const radio of document.querySelectorAll('input[name=coverage]')) {
+        radio.addEventListener('change', () => {
+          if (customDetails) customDetails.open = (radio.value === 'custom' && radio.checked);
+        });
+      }
 
       // Visual cue: dim slots that are blank so the user can see at a glance
       // how many sizes will actually be built.  Purely cosmetic — `build()`
