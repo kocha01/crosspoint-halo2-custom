@@ -32,6 +32,13 @@ class SdCardFontSystem {
   /// directories, no font-data I/O.
   void rediscover() { registry_.discover(); }
 
+  /// Free the page-resident glyph mini-caches on every loaded SD font while
+  /// keeping the font registered with the renderer.  Called by
+  /// EpubReaderActivity::onExit() to release ~17-30KB before the Home cover
+  /// LRU cache is populated.  Re-entering the reader rebuilds the mini cache
+  /// on the first page-turn (same cost as the initial render).
+  void releaseReaderHeap() { manager_.clearAllMiniCaches(); }
+
  private:
   SdCardFontRegistry registry_;
   SdCardFontManager manager_;

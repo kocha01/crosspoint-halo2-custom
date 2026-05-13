@@ -25,6 +25,19 @@ class SdCardFontManager {
   // Unload everything, unregister from renderer.
   void unloadAll(GfxRenderer& renderer);
 
+  // Free the mini-cache (page-resident glyph bitmaps + kern matrix) on every
+  // loaded SD font WITHOUT unloading the font itself.  The headers, intervals,
+  // and kern-class tables stay resident so a subsequent prewarm() can rebuild
+  // the page cache from SD without re-reading the file header.
+  //
+  // Used by EpubReaderActivity::onExit to give back ~17-30KB of heap to the
+  // upcoming Home activity, whose cover BMP LRU cache (~96KB) plus recent-book
+  // parsing pushes RAM close to the wall on the 320KB ESP32-C3.  Without this,
+  // exiting Reader → Home with an SD font selected can OOM during cover-cache
+  // population and reboot the device.  Re-entering the Reader pays a one-page
+  // prewarm cost (already paid on every initial page-turn anyway).
+  void clearAllMiniCaches();
+
   // Look up the font ID for the loaded family. Returns 0 if nothing loaded
   // or familyName doesn't match.
   int getFontId(const std::string& familyName) const;

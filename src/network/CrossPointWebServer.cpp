@@ -15,6 +15,7 @@
 #include "SettingsList.h"
 #include "WebDAVHandler.h"
 #include "html/FilesPageHtml.generated.h"
+#include "html/FontBuilderHtml.generated.h"
 #include "html/FontsPageHtml.generated.h"
 #include "html/HomePageHtml.generated.h"
 #include "html/SettingsPageHtml.generated.h"
@@ -168,6 +169,11 @@ void CrossPointWebServer::begin() {
   // /api/fonts/delete (remove a family directory).
   server->on("/fonts", HTTP_GET,
              [this] { sendHtmlContent(server.get(), FontsPageHtml, sizeof(FontsPageHtml)); });
+  // In-browser TTF/OTF → .cpfont builder.  Same standalone page as
+  // tools/web-font-builder/index.html, embedded so users on the device's WiFi
+  // can convert + upload in one round trip without needing the source repo.
+  server->on("/fonts/builder", HTTP_GET,
+             [this] { sendHtmlContent(server.get(), FontBuilderHtml, sizeof(FontBuilderHtml)); });
   server->on(
       "/api/fonts/upload", HTTP_POST, [this] { handleFontUploadPost(fontUpload); },
       [this] { handleFontUpload(fontUpload); });

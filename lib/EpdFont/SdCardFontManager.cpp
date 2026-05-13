@@ -98,6 +98,12 @@ void SdCardFontManager::unloadAll(GfxRenderer& renderer) {
   loadedPointSize_ = 0;
 }
 
+void SdCardFontManager::clearAllMiniCaches() {
+  for (auto& lf : loaded_) {
+    if (lf.font) lf.font->clearCache();
+  }
+}
+
 int SdCardFontManager::getFontId(const std::string& familyName) const {
   if (familyName != loadedFamilyName_ || loaded_.empty()) return 0;
   return loaded_.front().fontId;

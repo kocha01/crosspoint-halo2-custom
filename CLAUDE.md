@@ -646,6 +646,27 @@ Tested in all 4 orientations with 5MB+ files.
 
 **Rule**: **If uncertain, ASK before committing.**
 
+### Release Policy (project-specific)
+
+**DO NOT** bump `[crosspoint] version` in `platformio.ini`, create git tags, or push tags **unless the user explicitly says "release"** (or equivalent in Thai: "ปล่อย release", "ออก release", "release ได้แล้ว", etc.).
+
+Why: pushing a `vX.Y.Z` tag triggers `.github/workflows/release.yml` → builds + uploads a `firmware.bin` to GitHub Releases → devices in the field see the new version via the in-app update-check popup. Each tag = one release the user has to track. The user batches multiple fixes into one release to keep the version count low and avoid pushing untested firmware notifications.
+
+**OK without asking**:
+- `git commit` on modified files
+- `git push origin <branch>` (branch only — no tags)
+
+**Requires explicit "release"**:
+- Editing `[crosspoint] version` in `platformio.ini`
+- `git tag vX.Y.Z`
+- `git push origin vX.Y.Z` or `git push --tags`
+
+When the user says "release", the standard sequence is:
+1. Bump `[crosspoint] version` in `platformio.ini`
+2. Commit the version bump (`chore: bump version to X.Y.Z`) — or fold into a feature commit if appropriate
+3. `git tag vX.Y.Z`
+4. `git push origin <branch>` then `git push origin vX.Y.Z`
+
 ---
 
 ## Generated Files and Build Artifacts

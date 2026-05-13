@@ -1,5 +1,6 @@
 #include "ModernTheme.h"
 
+#include <Arduino.h>  // ESP.getFreeHeap()
 #include <algorithm>
 #include <GfxRenderer.h>
 #include <HalPowerManager.h>
@@ -101,8 +102,16 @@ void bmpCacheMakeRoomFor(size_t incomingBytes) {
   }
 }
 
+// Minimum free heap to keep available after any cache allocation, in bytes.
+// When an SD card font (~17-30KB resident) is selected alongside this 96KB
+// cover cache, leaving Reader → Home can briefly approach the heap ceiling.
+// Refusing to cache below this threshold trades cover-render perf for
+// stability — uncached covers still render correctly, just from SD per draw.
+constexpr size_t BMP_CACHE_MIN_FREE_HEAP_BYTES = 40 * 1024;
+
 // Load `path` from SD into the cache (or return existing cache hit).  Returns
-// nullptr if the file doesn't exist or is too large to fit even after eviction.
+// nullptr if the file doesn't exist, is too large to fit even after eviction,
+// or caching would push the system below BMP_CACHE_MIN_FREE_HEAP_BYTES.
 const std::vector<uint8_t>* loadOrCacheBmp(const std::string& path) {
   if (const auto* hit = findCachedBmp(path)) return hit;
 
@@ -115,6 +124,16 @@ const std::vector<uint8_t>* loadOrCacheBmp(const std::string& path) {
   }
 
   bmpCacheMakeRoomFor(fileSize);
+
+  // Heap-pressure check: skip caching when we'd dip below the safety floor.
+  // The caller falls back to a no-cover placeholder rather than crashing —
+  // see drawCoverAt's `hasCover = false` path.  Eviction above already freed
+  // up budget, but absolute free heap can still be low when SD fonts or
+  // reader buffers are resident.
+  if (ESP.getFreeHeap() < fileSize + BMP_CACHE_MIN_FREE_HEAP_BYTES) {
+    file.close();
+    return nullptr;
+  }
 
   CachedBmp entry;
   entry.path = path;

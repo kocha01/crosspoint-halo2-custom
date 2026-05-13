@@ -13,6 +13,7 @@
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "Epub/hyphenation/ThaiWordBreaker.h"
+#include "SdCardFontGlobals.h"
 #include "activities/settings/ThaiDictionaryActivity.h"
 #include "EpubReaderChapterSelectionActivity.h"
 #include "EpubReaderFootnotesActivity.h"
@@ -107,6 +108,16 @@ void EpubReaderActivity::onExit() {
   APP_STATE.saveToFile();
   section.reset();
   epub.reset();
+
+  // Release the SD font's page-resident glyph cache (~17-30KB) before Home's
+  // 96KB cover BMP LRU cache gets populated.  On the 320KB ESP32-C3, holding
+  // both Reader and Home heap peaks simultaneously can OOM and reboot the
+  // device (the SD font otherwise stays warm across activity transitions,
+  // which is fine for page turns but a liability when leaving the reader).
+  // The font itself remains registered with the renderer — re-entering the
+  // reader rebuilds the mini cache on the first page-turn (same cost as the
+  // initial render).
+  sdFontSystem.releaseReaderHeap();
 }
 
 void EpubReaderActivity::loop() {
