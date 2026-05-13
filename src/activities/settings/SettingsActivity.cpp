@@ -11,10 +11,14 @@
 #include "LanguageSelectActivity.h"
 #include "MappedInputManager.h"
 #include "OtaUpdateActivity.h"
+#include "SdCardFontGlobals.h"
 #include "SdCardFontPickerActivity.h"
 #include "SettingsList.h"
 #include "SleepWallpaperPickerActivity.h"
 #include "StatusBarSettingsActivity.h"
+#include <SdCardFontRegistry.h>
+#include <SdCardFontSystem.h>
+#include <algorithm>
 #include "ThaiDictionaryActivity.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "components/UITheme.h"
@@ -189,11 +193,46 @@ void SettingsActivity::toggleCurrentSetting() {
     const uint8_t currentValue = SETTINGS.*(setting.valuePtr);
     SETTINGS.*(setting.valuePtr) = (currentValue + 1) % static_cast<uint8_t>(setting.enumValues.size());
   } else if (setting.type == SettingType::VALUE && setting.valuePtr != nullptr) {
-    const int8_t currentValue = SETTINGS.*(setting.valuePtr);
-    if (currentValue + setting.valueRange.step > setting.valueRange.max) {
-      SETTINGS.*(setting.valuePtr) = setting.valueRange.min;
-    } else {
-      SETTINGS.*(setting.valuePtr) = currentValue + setting.valueRange.step;
+    bool handled = false;
+    // Dynamic cycling for the Reader font-size row when a custom SD font is
+    // selected: walk through the family's actual .cpfont sizes (e.g. 18/20/22
+    // for a font compiled at those specific sizes) instead of the built-in
+    // 12..20 step range.  Without this, the user can change fontSize but the
+    // closest-match logic in SdCardFontSystem::ensureLoaded() may snap back
+    // to the same .cpfont file every step, so the cycle has no visible
+    // effect.  Falls back to the built-in cycling when no SD font is active.
+    if (setting.nameId == StrId::STR_FONT_SIZE && SETTINGS.sdFontFamilyName[0] != '\0') {
+      const auto* family = sdFontSystem.registry().findFamily(SETTINGS.sdFontFamilyName);
+      if (family && !family->files.empty()) {
+        std::vector<uint8_t> sizes;
+        sizes.reserve(family->files.size());
+        for (const auto& f : family->files) sizes.push_back(f.pointSize);
+        std::sort(sizes.begin(), sizes.end());
+        sizes.erase(std::unique(sizes.begin(), sizes.end()), sizes.end());
+        const uint8_t current = SETTINGS.*(setting.valuePtr);
+        // Find the next size strictly greater than current; wrap to first.
+        uint8_t next = sizes.front();
+        for (uint8_t s : sizes) {
+          if (s > current) {
+            next = s;
+            break;
+          }
+        }
+        SETTINGS.*(setting.valuePtr) = next;
+        // Re-resolve to the closest-matching .cpfont file (the cycle picks
+        // values that exist on disk, so this is normally an exact match).
+        ensureSdFontLoaded();
+        handled = true;
+      }
+    }
+    if (!handled) {
+      // Built-in cycling: step through valueRange.min..max.
+      const int8_t currentValue = SETTINGS.*(setting.valuePtr);
+      if (currentValue + setting.valueRange.step > setting.valueRange.max) {
+        SETTINGS.*(setting.valuePtr) = setting.valueRange.min;
+      } else {
+        SETTINGS.*(setting.valuePtr) = currentValue + setting.valueRange.step;
+      }
     }
   } else if (setting.type == SettingType::ACTION) {
     auto resultHandler = [this](const ActivityResult&) { SETTINGS.saveToFile(); };
