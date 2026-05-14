@@ -49,10 +49,19 @@ void SdCardFontSystem::ensureLoaded(GfxRenderer& renderer) {
   const std::string& currentFamily = manager_.currentFamilyName();
   const uint8_t targetPt = targetPtSizeFromSettings();
 
+  // Entry trace so a serial capture always shows ensureLoaded was reached,
+  // what the inputs looked like, and whether the function took an early-exit
+  // path.  Picker-confirmed "load this font" calls that produce no follow-up
+  // SDMGR/SDCF lines are the symptom we're chasing.
+  LOG_INF("SDFS", "ensureLoaded enter: wanted='%s' current='%s' targetPt=%u",
+          wantedFamily[0] ? wantedFamily : "(empty)",
+          currentFamily.empty() ? "(empty)" : currentFamily.c_str(), targetPt);
+
   if (wantedFamily[0] == '\0') {
     if (!currentFamily.empty()) {
       manager_.unloadAll(renderer);
     }
+    LOG_INF("SDFS", "ensureLoaded exit: wanted empty, returning");
     return;
   }
 
@@ -76,7 +85,11 @@ void SdCardFontSystem::ensureLoaded(GfxRenderer& renderer) {
         bestPt = f.pointSize;
       }
     }
-    if (bestPt == manager_.currentPointSize()) return;  // already loaded with the right size
+    if (bestPt == manager_.currentPointSize()) {
+      LOG_INF("SDFS", "ensureLoaded exit: %s already loaded at size %u (target %u) — no reload", wantedFamily,
+              bestPt, targetPt);
+      return;  // already loaded with the right size
+    }
     LOG_INF("SDFS", "Reloading %s: size %u -> %u (target %u)", wantedFamily, manager_.currentPointSize(), bestPt,
             targetPt);
   }

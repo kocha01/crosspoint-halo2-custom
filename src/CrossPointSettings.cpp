@@ -332,7 +332,14 @@ int CrossPointSettings::getReaderFontId() const {
   // to the built-in switch below so reading keeps working.
   if (sdFontFamilyName[0] != '\0' && sdFontIdResolver) {
     int id = sdFontIdResolver(sdFontResolverCtx, sdFontFamilyName, fontSize);
-    if (id > 0) return id;
+    // SD font IDs are FNV-1a hashes cast to int32_t and CAN BE NEGATIVE — the
+    // hash's MSB ends up as the sign bit ~half the time, so e.g. ChakraPetch
+    // computes to -2119622908.  The earlier `if (id > 0)` check silently
+    // rejected those legitimate IDs and fell through to the built-in font
+    // switch, so picking a custom font whose hash happened to be negative
+    // looked exactly like "the selection didn't take effect."  Only 0 is
+    // reserved as the "not loaded" sentinel (computeFontId remaps it to 1).
+    if (id != 0) return id;
   }
 
   switch (fontFamily) {
@@ -407,7 +414,14 @@ int CrossPointSettings::getReaderFontIdForLanguage(const std::string& language) 
   // logic below.
   if (sdFontFamilyName[0] != '\0' && sdFontIdResolver) {
     int id = sdFontIdResolver(sdFontResolverCtx, sdFontFamilyName, fontSize);
-    if (id > 0) return id;
+    // SD font IDs are FNV-1a hashes cast to int32_t and CAN BE NEGATIVE — the
+    // hash's MSB ends up as the sign bit ~half the time, so e.g. ChakraPetch
+    // computes to -2119622908.  The earlier `if (id > 0)` check silently
+    // rejected those legitimate IDs and fell through to the built-in font
+    // switch, so picking a custom font whose hash happened to be negative
+    // looked exactly like "the selection didn't take effect."  Only 0 is
+    // reserved as the "not loaded" sentinel (computeFontId remaps it to 1).
+    if (id != 0) return id;
   }
   if (fontFamily != BOOKERLY) return getReaderFontId();
   if (isThaiLanguage(language)) return getThaiFallbackFontId();
@@ -420,7 +434,14 @@ int CrossPointSettings::getReaderFontIdForThaiContent(const std::string& languag
   // Thai-fallback heuristic.
   if (sdFontFamilyName[0] != '\0' && sdFontIdResolver) {
     int id = sdFontIdResolver(sdFontResolverCtx, sdFontFamilyName, fontSize);
-    if (id > 0) return id;
+    // SD font IDs are FNV-1a hashes cast to int32_t and CAN BE NEGATIVE — the
+    // hash's MSB ends up as the sign bit ~half the time, so e.g. ChakraPetch
+    // computes to -2119622908.  The earlier `if (id > 0)` check silently
+    // rejected those legitimate IDs and fell through to the built-in font
+    // switch, so picking a custom font whose hash happened to be negative
+    // looked exactly like "the selection didn't take effect."  Only 0 is
+    // reserved as the "not loaded" sentinel (computeFontId remaps it to 1).
+    if (id != 0) return id;
   }
   // Bai Jamjuree and CloudLoop all have native Thai glyphs — no fallback needed.
   if (fontFamily != BOOKERLY) return getReaderFontId();

@@ -48,7 +48,20 @@ int clampPercent(int percent) {
 }  // namespace
 
 int EpubReaderActivity::getEffectiveFontId() const {
-  return SETTINGS.getReaderFontIdForThaiContent(epub->getLanguage(), epub->getTitle());
+  const int id = SETTINGS.getReaderFontIdForThaiContent(epub->getLanguage(), epub->getTitle());
+  // Throttle to once per ~3 seconds so page renders don't flood serial but
+  // every book entry / settings change is captured.
+  static int lastLoggedId = 0;
+  static unsigned long lastLogMs = 0;
+  const unsigned long now = millis();
+  if (id != lastLoggedId || now - lastLogMs > 3000) {
+    lastLoggedId = id;
+    lastLogMs = now;
+    LOG_INF("READER", "getEffectiveFontId=%d (sdFont='%s' fontFamily=%u fontSize=%u lang='%s' title='%s')",
+            id, SETTINGS.sdFontFamilyName, (unsigned)SETTINGS.fontFamily, (unsigned)SETTINGS.fontSize,
+            epub->getLanguage().c_str(), epub->getTitle().c_str());
+  }
+  return id;
 }
 
 void EpubReaderActivity::onEnter() {
