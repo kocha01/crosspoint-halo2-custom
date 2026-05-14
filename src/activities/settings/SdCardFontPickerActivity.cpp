@@ -1,5 +1,6 @@
 #include "SdCardFontPickerActivity.h"
 
+#include <Arduino.h>  // ESP.getFreeHeap()
 #include <GfxRenderer.h>
 #include <I18n.h>
 #include <Logging.h>
@@ -58,6 +59,7 @@ void SdCardFontPickerActivity::onBack() {
 void SdCardFontPickerActivity::handleSelection() {
   // Row 0 is always the synthetic "(Built-in)" entry: clears the SD font choice.
   if (selectedIndex == 0) {
+    LOG_INF("SDFP", "User cleared SD font (back to built-in)");
     SETTINGS.sdFontFamilyName[0] = '\0';
     ensureSdFontLoaded();  // unloads any currently-loaded SD font
     finish();
@@ -72,6 +74,12 @@ void SdCardFontPickerActivity::handleSelection() {
   if (fileIndex >= families.size()) {
     return;
   }
+  // Visible log of the picker action so users hitting "I picked it but the
+  // reader still uses the built-in" can see in the serial log whether the
+  // selection was even attempted, what was attempted, and what the load
+  // result was (SDFS/SDMGR log the result a few lines later).
+  LOG_INF("SDFP", "User picked SD font: %s (heap free=%u)", families[fileIndex].c_str(),
+          static_cast<unsigned>(ESP.getFreeHeap()));
   std::snprintf(SETTINGS.sdFontFamilyName, sizeof(SETTINGS.sdFontFamilyName), "%s",
                 families[fileIndex].c_str());
   ensureSdFontLoaded();  // load + register with renderer

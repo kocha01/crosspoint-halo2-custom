@@ -30,18 +30,18 @@ void SdCardFontSystem::begin(GfxRenderer& renderer) {
     const auto* family = registry_.findFamily(SETTINGS.sdFontFamilyName);
     if (family) {
       if (manager_.loadFamily(*family, renderer, targetPtSizeFromSettings())) {
-        LOG_DBG("SDFS", "Loaded SD card font family: %s", SETTINGS.sdFontFamilyName);
+        LOG_INF("SDFS", "Loaded SD card font family: %s", SETTINGS.sdFontFamilyName);
       } else {
         LOG_ERR("SDFS", "Failed to load SD font family: %s (clearing)", SETTINGS.sdFontFamilyName);
         SETTINGS.sdFontFamilyName[0] = '\0';
       }
     } else {
-      LOG_DBG("SDFS", "SD font family not found on card: %s (clearing)", SETTINGS.sdFontFamilyName);
+      LOG_INF("SDFS", "SD font family not found on card: %s (clearing)", SETTINGS.sdFontFamilyName);
       SETTINGS.sdFontFamilyName[0] = '\0';
     }
   }
 
-  LOG_DBG("SDFS", "SD font system ready (%d families discovered)", registry_.getFamilyCount());
+  LOG_INF("SDFS", "SD font system ready (%d families discovered)", registry_.getFamilyCount());
 }
 
 void SdCardFontSystem::ensureLoaded(GfxRenderer& renderer) {
@@ -62,7 +62,7 @@ void SdCardFontSystem::ensureLoaded(GfxRenderer& renderer) {
   if (familyMatches) {
     const auto* family = registry_.findFamily(wantedFamily);
     if (!family) {
-      LOG_DBG("SDFS", "SD font family disappeared: %s (clearing)", wantedFamily);
+      LOG_INF("SDFS", "SD font family disappeared: %s (clearing)", wantedFamily);
       manager_.unloadAll(renderer);
       SETTINGS.sdFontFamilyName[0] = '\0';
       return;
@@ -77,7 +77,7 @@ void SdCardFontSystem::ensureLoaded(GfxRenderer& renderer) {
       }
     }
     if (bestPt == manager_.currentPointSize()) return;  // already loaded with the right size
-    LOG_DBG("SDFS", "Reloading %s: size %u -> %u (target %u)", wantedFamily, manager_.currentPointSize(), bestPt,
+    LOG_INF("SDFS", "Reloading %s: size %u -> %u (target %u)", wantedFamily, manager_.currentPointSize(), bestPt,
             targetPt);
   }
 
@@ -88,13 +88,13 @@ void SdCardFontSystem::ensureLoaded(GfxRenderer& renderer) {
   const auto* family = registry_.findFamily(wantedFamily);
   if (family) {
     if (manager_.loadFamily(*family, renderer, targetPt)) {
-      LOG_DBG("SDFS", "Loaded SD font family: %s", wantedFamily);
+      LOG_INF("SDFS", "Loaded SD font family: %s", wantedFamily);
     } else {
       LOG_ERR("SDFS", "Failed to load SD font family: %s (clearing)", wantedFamily);
       SETTINGS.sdFontFamilyName[0] = '\0';
     }
   } else {
-    LOG_DBG("SDFS", "SD font family not found: %s (clearing)", wantedFamily);
+    LOG_INF("SDFS", "SD font family not found: %s (clearing)", wantedFamily);
     SETTINGS.sdFontFamilyName[0] = '\0';
   }
 }

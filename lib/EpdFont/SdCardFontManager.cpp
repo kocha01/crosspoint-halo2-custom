@@ -76,7 +76,10 @@ bool SdCardFontManager::loadFamily(const SdCardFontFamilyInfo& family, GfxRender
   renderer.registerSdCardFont(fontId, font);
   loaded_.push_back({font, fontId, selected->pointSize});
 
-  LOG_DBG("SDMGR", "Loaded %s size=%u id=%d styles=%u (target=%u)", selected->path.c_str(), selected->pointSize, fontId,
+  // Upgraded from LOG_DBG to LOG_INF so gh_release builds still surface this
+  // line — without it, debugging "font picked but reader uses built-in" cases
+  // requires a debug build, but most users hit the issue on release firmware.
+  LOG_INF("SDMGR", "Loaded %s size=%u id=%d styles=%u (target=%u)", selected->path.c_str(), selected->pointSize, fontId,
           font->styleCount(), targetPtSize);
 
   EpdFontFamily fontFamily(font->getEpdFont(0), font->getEpdFont(1), font->getEpdFont(2), font->getEpdFont(3));

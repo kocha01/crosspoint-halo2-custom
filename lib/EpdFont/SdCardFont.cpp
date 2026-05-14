@@ -533,11 +533,16 @@ bool SdCardFont::load(const char* path) {
   file.close();
   loaded_ = true;
 
-  LOG_DBG("SDCF", "Loaded: %s (v%u, %u styles)", path, CPFONT_VERSION, styleCount_);
+  // Upgraded to LOG_INF so gh_release users can see whether their .cpfont
+  // actually loaded.  The picker can silently end up with an empty SD font
+  // selection if load fails partway through (e.g. interval allocation fails),
+  // and without this line there's no way to tell from the serial log whether
+  // the font even reached the post-load state.
+  LOG_INF("SDCF", "Loaded: %s (v%u, %u styles, hash=0x%08x)", path, CPFONT_VERSION, styleCount_, contentHash_);
   for (uint8_t i = 0; i < MAX_STYLES; i++) {
     if (!styles_[i].present) continue;
     const auto& h = styles_[i].header;
-    LOG_DBG("SDCF", "  style[%u]: %u intervals, %u glyphs, advY=%u, asc=%d, desc=%d, kernL=%u, kernR=%u, ligs=%u", i,
+    LOG_INF("SDCF", "  style[%u]: %u intervals, %u glyphs, advY=%u, asc=%d, desc=%d, kernL=%u, kernR=%u, ligs=%u", i,
             h.intervalCount, h.glyphCount, h.advanceY, h.ascender, h.descender, h.kernLeftEntryCount,
             h.kernRightEntryCount, h.ligaturePairCount);
   }

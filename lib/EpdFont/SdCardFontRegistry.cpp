@@ -212,10 +212,12 @@ bool SdCardFontRegistry::discover() {
     families_.resize(MAX_SD_FAMILIES);
   }
 
+  // Upgraded to LOG_INF so gh_release users debugging "font not in picker" or
+  // "font silently skipped" can see exactly what discover() found.
   for (const auto& fam : families_) {
-    LOG_DBG("SDREG", "Family: %s (%d files)", fam.name.c_str(), static_cast<int>(fam.files.size()));
+    LOG_INF("SDREG", "Family: %s (%d files)", fam.name.c_str(), static_cast<int>(fam.files.size()));
   }
-  LOG_DBG("SDREG", "Discovery complete: %d families", static_cast<int>(families_.size()));
+  LOG_INF("SDREG", "Discovery complete: %d families", static_cast<int>(families_.size()));
   return !families_.empty();
 }
 
