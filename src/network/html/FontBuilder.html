@@ -430,9 +430,23 @@
       // matching how the firmware decodes 2bpp BMPs.
       const SUPERSAMPLE = 4;
 
+      // Reference Python converter (lib/EpdFont/scripts/fontconvert_sdcard.py)
+      // sets FreeType with `face.set_char_size(size, size, 150, 150)` — i.e.
+      // interprets the user-typed "size" as POINTS at 150 DPI, which works out
+      // to PPEM = size * 150 / 72.  The firmware was designed around those
+      // pixel metrics — built-in fonts ship at the same 150 DPI convention, so
+      // a built-in "CloudLoop 18" line height matches a Python-built "size 18"
+      // SD font.  opentype.js' getPath fontSize parameter is just PPEM (pixels
+      // per em) and was previously used directly, which made every SD font
+      // built via the in-browser builder come out ~2.08× smaller than the
+      // user expected — Font Builder "size 24" looking smaller than built-in
+      // "size 14".  Scale here so the JS pipeline mirrors the Python one.
+      const PT_TO_PX = 150 / 72;  // ≈ 2.083
+
       function renderGlyph(font, glyph, fontSize) {
+        const ppem = fontSize * PT_TO_PX;
         // opentype.js gives us a Path object; we need its bbox at this size.
-        const path = glyph.getPath(0, 0, fontSize);
+        const path = glyph.getPath(0, 0, ppem);
         const bbox = path.getBoundingBox();
 
         // Coordinate convention note (the previous code had this wrong, which is
@@ -459,7 +473,10 @@
         const height = Math.max(0, topYUp - bottomYUp);
 
         // advanceX is in 12.4 fixed-point pixels per the firmware's EpdGlyph layout.
-        const advanceXPx = (glyph.advanceWidth || 0) * (fontSize / font.unitsPerEm);
+        // Use the SAME scaled ppem the path was drawn at — using the raw
+        // fontSize here was the second half of the size-mismatch bug above
+        // (glyph bitmap was at one scale, advance metric at another).
+        const advanceXPx = (glyph.advanceWidth || 0) * (ppem / font.unitsPerEm);
         const advanceXFp = Math.round(advanceXPx * 16);  // 12.4 fixed-point
 
         if (width === 0 || height === 0) {
@@ -487,7 +504,7 @@
         // bbox.y2 which placed the baseline at y=0 of the canvas, sending the
         // entire glyph off the top of the surface for Latin and missing Thai
         // combining marks entirely.)
-        const ssPath = glyph.getPath(-left * ss, topYUp * ss, fontSize * ss);
+        const ssPath = glyph.getPath(-left * ss, topYUp * ss, ppem * ss);
         ssCtx.fillStyle = '#000';
         ssPath.draw(ssCtx);
 
@@ -755,8 +772,11 @@
               continue;
             }
 
-            // Font metrics in pixels at this size.
-            const scale = size / currentFont.unitsPerEm;
+            // Font metrics in pixels at this size — same PPEM = size × 150/72
+            // scale that renderGlyph uses, so line-height/ascender/descender
+            // match the glyph bitmaps and the firmware lays text out correctly.
+            const ppem = size * PT_TO_PX;
+            const scale = ppem / currentFont.unitsPerEm;
             const ascender = Math.ceil(currentFont.ascender * scale);
             const descender = Math.floor(currentFont.descender * scale);
             const advanceY = Math.max(1, Math.ceil((currentFont.ascender - currentFont.descender) * scale));
